@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/arcanetechhq/privacy-layer-confidential-sdk/compare/privacy-sdk-stellar-v0.6.0...privacy-sdk-stellar-v0.6.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* typescript issue ([eb2fd35](https://github.com/arcanetechhq/privacy-layer-confidential-sdk/commit/eb2fd3545a55bb19e37bb75ebfde4d49609df95e))
+
 ## [0.6.0](https://github.com/arcanetechhq/privacy-layer-confidential-sdk/compare/privacy-sdk-stellar-v0.5.4...privacy-sdk-stellar-v0.6.0) (2026-09-22)
 
 
