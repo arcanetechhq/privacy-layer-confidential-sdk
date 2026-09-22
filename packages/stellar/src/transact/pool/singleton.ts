@@ -34,3 +34,7 @@ export function getPrivacyPoolService(): PrivacyPoolService {
   }
   return configuredPrivacyPoolService;
 }
+
+export function tryGetPrivacyPoolService(): PrivacyPoolService | undefined {
+  return configuredPrivacyPoolService;
+}

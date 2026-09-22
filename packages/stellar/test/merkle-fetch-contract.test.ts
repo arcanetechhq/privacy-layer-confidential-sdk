@@ -105,6 +105,7 @@ describe('fetchAndMergeMerkleState', () => {
         commitmentCount: 2,
         merkleRootHex: ROOT.toString('hex'),
         updatedAt: 10,
+        nodes: [{ level: 1, index: 0, value: '1' }],
       }),
       set,
     };
@@ -115,6 +116,7 @@ describe('fetchAndMergeMerkleState', () => {
       poolMerkleState,
     });
     expect(result.commitments).toEqual(['1', '2']);
+    expect(result.nodes).toEqual([{ level: 1, index: 0, value: '1' }]);
     expect(mocks.getLedgerEntries).not.toHaveBeenCalled();
     expect(set).not.toHaveBeenCalled();
   });

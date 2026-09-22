@@ -80,7 +80,7 @@ async function finalizeSingleWithdrawAtExecute(
   });
   const proof = await poolService.prepareWithdrawTransactProof({
     coin: context.coin,
-    state: { commitments: context.commitments },
+    state: context.merkleState,
     destinationStellarAddress: prepared.intent.to,
     privKeyScalarHex: context.senderPrivKeyScalarHex,
     depositorEphemeralKey: serializeEphemeralKeyString({
@@ -143,7 +143,7 @@ async function finalizeDualWithdrawAtExecute(
   const proof = await poolService.prepareWithdrawTransactProofDual({
     coinA: context.coin,
     coinB: secondary.coin,
-    state: { commitments: context.commitments },
+    state: context.merkleState,
     destinationStellarAddress: prepared.intent.to,
     privKeyScalarHex: context.senderPrivKeyScalarHex,
     ...dualWithdrawEphemeralKeys({ context, secondary }),

@@ -4,6 +4,7 @@ import type {
   PrivacyPoolSDK,
   StateFile,
 } from '@arcanetech/stellar-privacy-pool-zk-sdk';
+import { withdrawMerkleWitnessFromTree } from '../../merkle/tree-session.js';
 
 export const MIN_CONFIDENTIAL_TRANSFER_STROOPS = 1n;
 export const ZERO_STROOPS = 0n;
@@ -17,7 +18,7 @@ export function withdrawWitnessForCoin(parameters: {
   applicationId: string;
 }) {
   const { sdk, coin, state } = parameters;
-  const witness = sdk.buildWithdrawMerkleWitness(coin, state);
+  const witness = withdrawMerkleWitnessFromTree({ sdk, coin, state });
   const withdrawApplicationId = coin.application_id ?? parameters.applicationId;
   const withdrawObject = withdrawObjectFromMerkleWitness(
     witness,

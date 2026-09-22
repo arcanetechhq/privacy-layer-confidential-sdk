@@ -57,7 +57,8 @@ export async function buildSpendProofContextAtExecute(input: {
     input.prepared.intent.asset,
   );
   const coin = requireCoinNoteFromRecord(primaryRecord);
-  const { commitments } = await loadMerkleState(input.environment, walletPublicKey);
+  const merkleState = await loadMerkleState(input.environment, walletPublicKey);
+  const commitments = merkleState.commitments;
   const leafIndex = findCommitmentLeafIndex(commitments, coin.commitment);
   if (leafIndex < 0) {
     throw new Error('Coin commitment not found in on-chain Merkle state.');
@@ -76,6 +77,7 @@ export async function buildSpendProofContextAtExecute(input: {
     tokenAddress,
     coin,
     commitments,
+    merkleState,
     ephemeral,
     senderPrivKeyScalarHex,
     recipientPrivateAddressStpl1: input.recipientPrivateAddressStpl1,

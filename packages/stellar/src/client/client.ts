@@ -10,6 +10,10 @@ import {
   createStateDelegates,
   type StellarPrivacyClientStateDelegates,
 } from './state-delegates/index.js';
+import {
+  hydrateStellarPrivacyState,
+  type StellarPrivacyStateHydration,
+} from './hydrate-state.js';
 
 type StellarPrivacyClientNetwork = ComposedStellarPrivacyClient['network'];
 type StellarPrivacyClientOperations = ComposedStellarPrivacyClient['operations'];
@@ -31,16 +35,20 @@ export type StellarPrivacyClient = {
   waitForTransactionConfirmation: StellarPrivacyClientNetwork['waitForTransactionConfirmation'];
   fetchTransactionConfirmationStatus: StellarPrivacyClientNetwork['fetchTransactionConfirmationStatus'];
   getTransactionDetails: StellarPrivacyClientNetwork['getTransactionDetails'];
-} & StellarPrivacyClientStateDelegates;
+} & StellarPrivacyClientStateDelegates & {
+    hydrateState: (snapshot: StellarPrivacyStateHydration) => Promise<void>;
+  };
 
 export function createStellarPrivacyClientInstance(
   config: ResolvedStellarPrivacyClientConfig,
 ): StellarPrivacyClient {
   const composed = composeStellarPrivacyClient(config);
+  const stateDelegates = createStateDelegates(composed.state);
 
   return {
     state: composed.state,
-    ...createStateDelegates(composed.state),
+    ...stateDelegates,
+    hydrateState: (snapshot) => hydrateStellarPrivacyState(stateDelegates, snapshot),
     deposit: (intent) => composed.operations.deposit(intent),
     transfer: (intent) => composed.operations.transfer(intent),
     withdraw: (intent) => composed.operations.withdraw(intent),

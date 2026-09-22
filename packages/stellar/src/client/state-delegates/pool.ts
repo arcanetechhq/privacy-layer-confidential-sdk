@@ -1,4 +1,8 @@
 import type { StellarStateService } from '../../state/index.js';
+import {
+  appendPoolMerkleCommitments,
+  writePoolMerkleState,
+} from '../../transact/merkle/write-snapshot.js';
 
 export function createPoolStateDelegates(state: StellarStateService) {
   return {
@@ -7,10 +11,19 @@ export function createPoolStateDelegates(state: StellarStateService) {
     ) => state.getPoolMerkleState(poolContract),
     setPoolMerkleState: (
       poolState: Parameters<StellarStateService['setPoolMerkleState']>[0],
-    ) => state.setPoolMerkleState(poolState),
+    ) =>
+      writePoolMerkleState({
+        setPoolMerkleState: (next) => state.setPoolMerkleState(next),
+        state: poolState,
+      }),
     appendPoolCommitments: (
       input: Parameters<StellarStateService['appendPoolCommitments']>[0],
-    ) => state.appendPoolCommitments(input),
+    ) =>
+      appendPoolMerkleCommitments({
+        getPoolMerkleState: (poolContract) => state.getPoolMerkleState(poolContract),
+        appendPoolCommitments: (payload) => state.appendPoolCommitments(payload),
+        payload: input,
+      }),
     getLeafEphemeral: (input: Parameters<StellarStateService['getLeafEphemeral']>[0]) =>
       state.getLeafEphemeral(input),
     setLeafEphemeral: (

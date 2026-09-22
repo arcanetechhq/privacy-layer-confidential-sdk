@@ -13,6 +13,7 @@ import {
   padWithdrawSlotsToLayout,
 } from '../../zk/slots.js';
 import { MIN_CONFIDENTIAL_TRANSFER_STROOPS } from '../../proofs/confidential/helpers.js';
+import { withdrawMerkleWitnessFromTree } from '../../merkle/tree-session.js';
 import { remainingAfterRequiredFee } from '../../fees/quote-fee-output-for-prepared.js';
 import type { FeeOutputSpec } from '../../fees/append-fee-output.js';
 import { buildPoolTransactionAuditParameters } from '../../audit/parameters.js';
@@ -78,10 +79,11 @@ function buildPrimaryWithdrawForCoin(parameters: {
   state: StateFile;
   privKeyScalarHex: string;
 }) {
-  const witness = parameters.sdk.buildWithdrawMerkleWitness(
-    parameters.coin,
-    parameters.state,
-  );
+  const witness = withdrawMerkleWitnessFromTree({
+    sdk: parameters.sdk,
+    coin: parameters.coin,
+    state: parameters.state,
+  });
   const privKeyScalar = privKeyScalarDecimalFromRecipientScalarHex(
     parameters.privKeyScalarHex,
   );

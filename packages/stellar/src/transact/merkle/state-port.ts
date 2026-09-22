@@ -1,5 +1,6 @@
 import type {
   StellarLeafEphemeral,
+  StellarLeanImtNode,
   StellarPoolMerkleState,
 } from '../../state/domain/types.js';
 
@@ -20,6 +21,7 @@ export interface CachedPoolMerkleView {
   commitments: string[];
   updatedAt: number;
   merkleRootHex?: string;
+  nodes?: StellarLeanImtNode[];
 }
 
 export function poolMerkleStateToCachedView(
@@ -29,5 +31,6 @@ export function poolMerkleStateToCachedView(
     commitments: state.commitments,
     updatedAt: state.updatedAt,
     merkleRootHex: state.merkleRootHex,
+    ...(state.nodes ? { nodes: state.nodes } : {}),
   };
 }

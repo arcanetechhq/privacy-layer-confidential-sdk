@@ -17,6 +17,7 @@ export type {
   StellarPrivacyClientConfig,
 } from './client/create.js';
 export type { StellarPrivacyClient } from './client/client.js';
+export type { StellarPrivacyStateHydration } from './client/hydrate-state.js';
 export { stellarStateDefinitions } from './state/definitions/index.js';
 export {
   listWalletPrivateAddressRecordsForOwnerFromStateSnapshot,
@@ -36,6 +37,7 @@ export type {
   StellarIncomingDeliveriesFilter,
   StellarIncomingDelivery,
   StellarLeafEphemeral,
+  StellarLeanImtNode,
   StellarNetworkConfig,
   StellarOperationReceipt,
   StellarPolicyAdapter,

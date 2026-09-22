@@ -47,9 +47,12 @@ export function createPoolMerkleService(context: StellarStateServiceBase) {
       commitments: string[];
       merkleRootHex: string;
       syncedLedger?: number;
+      nodes?: StellarPoolMerkleState['nodes'];
     }): Promise<void> {
       const current = await this.getPoolMerkleState(input.poolContract);
       const mergedCommitments = [...(current?.commitments ?? []), ...input.commitments];
+      const nodes =
+        input.nodes ?? (input.commitments.length === 0 ? current?.nodes : undefined);
       await this.setPoolMerkleState(
         withoutUndefinedFields({
           poolContract: input.poolContract,
@@ -58,6 +61,7 @@ export function createPoolMerkleService(context: StellarStateServiceBase) {
           merkleRootHex: input.merkleRootHex,
           updatedAt: Date.now(),
           syncedLedger: input.syncedLedger ?? current?.syncedLedger,
+          nodes,
         }) as StellarPoolMerkleState,
       );
     },

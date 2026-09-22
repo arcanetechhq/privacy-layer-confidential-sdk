@@ -33,6 +33,7 @@ export type {
   StellarIncomingDeliveriesFilter,
   StellarIncomingDelivery,
   StellarLeafEphemeral,
+  StellarLeanImtNode,
   StellarPoolMerkleState,
   StellarPrivateAssetRow,
   StellarPrivateRecordStatus,

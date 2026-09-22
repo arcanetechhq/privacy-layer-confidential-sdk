@@ -1,4 +1,5 @@
 import type { DepositIntent } from '@arcanetech/privacy-sdk-core';
+import type { StateFile } from '@arcanetech/stellar-privacy-pool-zk-sdk';
 import type {
   StellarAddress,
   StellarAssetId,
@@ -6,6 +7,7 @@ import type {
 } from '../../../types.js';
 import type { StellarTransactEnvironment } from '../../environment/types.js';
 import { fetchAndMergeMerkleState } from '../../merkle/fetch-contract.js';
+import { merkleSnapshotToStateFile } from '../../merkle/state-file.js';
 
 export async function resolveTokenContractId(
   environment: StellarTransactEnvironment,
@@ -102,7 +104,7 @@ export async function ensureSenderPrivKeyScalarHex(
 export async function loadMerkleState(
   environment: StellarTransactEnvironment,
   walletPublicKey: string,
-): Promise<{ commitments: string[] }> {
+): Promise<StateFile & { commitments: string[] }> {
   const merged = await fetchAndMergeMerkleState({
     poolContractId: environment.network.poolContract,
     walletPublicKey,
@@ -111,7 +113,11 @@ export async function loadMerkleState(
       ? { poolMerkleState: environment.poolMerkleState }
       : {}),
   });
-  return { commitments: merged.commitments };
+  return merkleSnapshotToStateFile({
+    commitments: merged.commitments,
+    merkleRootHex: merged.merkleRootHex,
+    ...(merged.nodes ? { nodes: merged.nodes } : {}),
+  });
 }
 
 export function enrichPreparedOperation(

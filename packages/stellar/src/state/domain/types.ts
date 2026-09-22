@@ -68,6 +68,12 @@ export interface StellarWalletPrivateAddressRecord {
   createdAt: number;
 }
 
+export interface StellarLeanImtNode {
+  level: number;
+  index: number;
+  value: string;
+}
+
 export interface StellarPoolMerkleState {
   poolContract: string;
   commitments: string[];
@@ -75,6 +81,7 @@ export interface StellarPoolMerkleState {
   merkleRootHex: string;
   updatedAt: number;
   syncedLedger?: number;
+  nodes?: StellarLeanImtNode[];
 }
 
 export interface StellarLeafEphemeral {

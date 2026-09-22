@@ -81,6 +81,12 @@ export const walletPrivateAddressRecordSchema = z.object({
   createdAt: z.number(),
 });
 
+export const leanImtNodeSchema = z.object({
+  level: z.number().int().nonnegative(),
+  index: z.number().int().nonnegative(),
+  value: z.string().min(1),
+});
+
 export const poolMerkleStateSchema = z.object({
   poolContract: z.string().min(1),
   commitments: z.array(z.string()),
@@ -88,6 +94,7 @@ export const poolMerkleStateSchema = z.object({
   merkleRootHex: z.string().min(1),
   updatedAt: z.number(),
   syncedLedger: z.number().int().optional(),
+  nodes: z.array(leanImtNodeSchema).optional(),
 });
 
 export const leafEphemeralSchema = z.object({

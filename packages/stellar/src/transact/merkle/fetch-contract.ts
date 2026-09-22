@@ -11,13 +11,10 @@ import type { StellarTransactEnvironment } from '../environment/types.js';
 import type { PoolTransactClient } from '../pool/types.js';
 import { readTreeLeafCommitments } from './read-tree-leaves.js';
 import { reuseCachedCommitments } from './reuse-cached-commitments.js';
+import { persistFetchedMerkleState } from './persist-fetched.js';
+import type { FetchContractMerkleResult } from './persist-fetched.js';
 
-export interface FetchContractMerkleResult {
-  commitmentCount: number;
-  commitments: string[];
-  merkleRootHex: string;
-  updatedAt: number;
-}
+export { type FetchContractMerkleResult } from './persist-fetched.js';
 
 /**
  * Loads pool Merkle leaves without `get_commitments()`. That helper walks the
@@ -149,58 +146,4 @@ async function loadCommitments(input: {
   return [...reused, ...fetched];
 }
 
-async function persistFetchedMerkleState(input: {
-  poolContractId: string;
-  commitments: string[];
-  merkleRootHex: string;
-  cachedState: CachedPoolMerkleView | undefined;
-  poolMerkleState?: PoolMerkleStatePort;
-}): Promise<FetchContractMerkleResult> {
-  const cachedState = input.cachedState;
-  if (
-    cachedState &&
-    cachedMerkleUnchanged(cachedState, input.commitments, input.merkleRootHex)
-  ) {
-    return viewFromCachedMerkle(cachedState, input.merkleRootHex);
-  }
-  const updatedAt = Date.now();
-  await input.poolMerkleState?.set({
-    poolContract: input.poolContractId,
-    commitments: input.commitments,
-    commitmentCount: input.commitments.length,
-    merkleRootHex: input.merkleRootHex,
-    updatedAt,
-  });
-  return {
-    commitments: input.commitments,
-    updatedAt,
-    merkleRootHex: input.merkleRootHex,
-    commitmentCount: input.commitments.length,
-  };
-}
-
-function viewFromCachedMerkle(
-  cachedState: CachedPoolMerkleView,
-  merkleRootHex: string,
-): FetchContractMerkleResult {
-  return {
-    commitments: cachedState.commitments,
-    updatedAt: cachedState.updatedAt,
-    merkleRootHex: cachedState.merkleRootHex ?? merkleRootHex,
-    commitmentCount: cachedState.commitments.length,
-  };
-}
-
-function cachedMerkleUnchanged(
-  cachedState: CachedPoolMerkleView | undefined,
-  commitments: string[],
-  merkleRootHex: string,
-): boolean {
-  if (!cachedState) {
-    return false;
-  }
-  if ((cachedState.merkleRootHex ?? merkleRootHex) !== merkleRootHex) {
-    return false;
-  }
-  return cachedState.commitments.join(',') === commitments.join(',');
-}
+export { type FetchContractMerkleResult } from './persist-fetched.js';

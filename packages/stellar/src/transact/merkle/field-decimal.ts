@@ -14,3 +14,13 @@ export function merkleRootBufferToFrDecimal(root: Buffer): string {
   const hex = Buffer.from(root).toString('hex');
   return (BigInt(`0x${hex}`) % BN254).toString(DECIMAL_STRING_RADIX);
 }
+
+const MERKLE_ROOT_HEX_PATTERN = /^[0-9a-fA-F]{64}$/;
+
+export function merkleRootHexToFrDecimal(merkleRootHex: string): string | undefined {
+  const trimmed = merkleRootHex.trim();
+  if (!MERKLE_ROOT_HEX_PATTERN.test(trimmed)) {
+    return undefined;
+  }
+  return merkleRootBufferToFrDecimal(Buffer.from(trimmed, 'hex'));
+}

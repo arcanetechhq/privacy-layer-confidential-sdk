@@ -129,6 +129,75 @@ describe('StellarPrivacyClient pool state', () => {
       xHex: '11'.repeat(32),
     });
   });
+
+  it('persists sparse merkle nodes on append and hydrateState', async () => {
+    const { client } = await createTestClient();
+    const nodes = [{ level: 1, index: 0, value: '9' }];
+    await client.setPoolMerkleState({
+      poolContract: 'C-POOL',
+      commitments: ['1', '2'],
+      commitmentCount: 2,
+      merkleRootHex: 'root-a',
+      updatedAt: 1,
+      nodes,
+    });
+    await client.appendPoolCommitments({
+      poolContract: 'C-POOL',
+      commitments: ['3', '4'],
+      merkleRootHex: 'root-b',
+      nodes: [...nodes, { level: 1, index: 1, value: '8' }],
+    });
+    await expect(client.getPoolMerkleState('C-POOL')).resolves.toMatchObject({
+      commitments: ['1', '2', '3', '4'],
+      merkleRootHex: 'root-b',
+      nodes: [...nodes, { level: 1, index: 1, value: '8' }],
+    });
+
+    const { client: hydrated } = await createTestClient();
+    await hydrated.hydrateState({
+      poolMerkleStates: [
+        {
+          poolContract: 'C-POOL',
+          commitments: ['1', '2'],
+          commitmentCount: 2,
+          merkleRootHex: 'root-a',
+          updatedAt: 1,
+          nodes,
+        },
+      ],
+      privateRecords: [createRecord('G-OWNER', 'USDC', 1n, 'note-1')],
+      walletPrivateAddressRecords: [
+        {
+          owner: 'G-OWNER',
+          nonce: '0',
+          privateAddress: 'stpl1owner',
+          createdAt: 1,
+        },
+      ],
+      walletPrivateAddressScalars: [
+        {
+          owner: 'G-OWNER',
+          nonce: '0',
+          scalarHex: 'aa'.repeat(32),
+        },
+      ],
+      walletDefaultPrivateAddressNonces: [{ owner: 'G-OWNER', nonce: '0' }],
+      assets: [sampleAsset],
+    });
+    await expect(hydrated.getPoolMerkleState('C-POOL')).resolves.toMatchObject({
+      commitments: ['1', '2'],
+      nodes,
+    });
+    await expect(hydrated.getPrivateRecords()).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'note-1' })]),
+    );
+    await expect(
+      hydrated.getWalletPrivateAddressRecord({ owner: 'G-OWNER', nonce: '0' }),
+    ).resolves.toMatchObject({ privateAddress: 'stpl1owner' });
+    await expect(hydrated.getAsset('USDC')).resolves.toMatchObject({
+      assetId: 'USDC',
+    });
+  });
 });
 
 describe('StellarPrivacyClient deliveries state', () => {
