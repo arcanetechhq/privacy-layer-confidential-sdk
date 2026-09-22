@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/arcanetechhq/privacy-layer-confidential-sdk/compare/privacy-sdk-stellar-v0.5.4...privacy-sdk-stellar-v0.6.0) (2026-09-22)
+
+
+### Features
+
+* merkle tree state manegement methods ([c59111f](https://github.com/arcanetechhq/privacy-layer-confidential-sdk/commit/c59111f656c11943173713b84fc04f2b28274d8e))
+
 ## [0.5.4](https://github.com/arcanetechhq/privacy-layer-confidential-sdk/compare/privacy-sdk-stellar-v0.5.3...privacy-sdk-stellar-v0.5.4) (2026-09-18)
 
 
