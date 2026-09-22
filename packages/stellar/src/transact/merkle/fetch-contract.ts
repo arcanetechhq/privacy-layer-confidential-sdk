@@ -12,7 +12,6 @@ import type { PoolTransactClient } from '../pool/types.js';
 import { readTreeLeafCommitments } from './read-tree-leaves.js';
 import { reuseCachedCommitments } from './reuse-cached-commitments.js';
 import { persistFetchedMerkleState } from './persist-fetched.js';
-import type { FetchContractMerkleResult } from './persist-fetched.js';
 
 export { type FetchContractMerkleResult } from './persist-fetched.js';
 
@@ -27,7 +26,7 @@ export async function fetchAndMergeMerkleState(parameters: {
   walletPublicKey: string;
   transactEnvironment: StellarTransactEnvironment;
   poolMerkleState?: PoolMerkleStatePort;
-}): Promise<FetchContractMerkleResult> {
+}): Promise<Awaited<ReturnType<typeof persistFetchedMerkleState>>> {
   const client = createPoolClient(parameters);
   const countRead = await client.get_commitment_count();
   const onChainCount = requireCommitmentCount(countRead.result);
@@ -145,5 +144,3 @@ async function loadCommitments(input: {
   });
   return [...reused, ...fetched];
 }
-
-export { type FetchContractMerkleResult } from './persist-fetched.js';
