@@ -81,7 +81,7 @@ export const walletPrivateAddressRecordSchema = z.object({
   createdAt: z.number(),
 });
 
-export const leanImtNodeSchema = z.object({
+const leanImtNodeSchema = z.object({
   level: z.number().int().nonnegative(),
   index: z.number().int().nonnegative(),
   value: z.string().min(1),

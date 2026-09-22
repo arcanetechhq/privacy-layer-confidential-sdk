@@ -4,7 +4,7 @@ import type { CachedPoolMerkleView } from './state-port.js';
 import type { LeanImtSessionApi } from './lean-imt-api.js';
 import { merkleSnapshotToStateFile } from './state-file.js';
 
-export function isEvenLeafCount(count: number): boolean {
+function isEvenLeafCount(count: number): boolean {
   return count % 2 === 0;
 }
 

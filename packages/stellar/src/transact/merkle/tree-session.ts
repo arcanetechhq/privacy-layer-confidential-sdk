@@ -7,12 +7,33 @@ import type {
 import { asLeanImtSessionApi, type LeanImtSessionApi } from './lean-imt-api.js';
 import { extendMerkleSnapshotNodes } from './extend-snapshot.js';
 import { merkleSnapshotToStateFile } from './state-file.js';
-import { tryGetPrivacyPoolService } from '../pool/singleton.js';
 import type { CachedPoolMerkleView } from './state-port.js';
 import type {
   StellarLeanImtNode,
   StellarPoolMerkleState,
 } from '../../state/domain/types.js';
+
+type MerkleSdkHost = {
+  getInitializedSdk: () => Promise<object>;
+};
+
+let merkleSdkHost: MerkleSdkHost | undefined;
+
+export function registerMerkleSessionSdkHost(host: MerkleSdkHost | undefined): void {
+  merkleSdkHost = host;
+}
+
+async function loadSessionSdk(): Promise<LeanImtSessionApi | undefined> {
+  const host = merkleSdkHost;
+  if (typeof host?.getInitializedSdk !== 'function') {
+    return undefined;
+  }
+  try {
+    return asLeanImtSessionApi(await host.getInitializedSdk());
+  } catch {
+    return undefined;
+  }
+}
 
 type MerkleTreeSession = {
   handle: number;
@@ -49,11 +70,11 @@ function importHandle(sdk: LeanImtSessionApi, state: StateFile): number | undefi
   }
 }
 
-export function merkleTreeHandleForState(state: StateFile): number | undefined {
+function merkleTreeHandleForState(state: StateFile): number | undefined {
   return handlesByKey.get(merkleSessionKey(state));
 }
 
-export function bindImportedMerkleTree(input: {
+function bindImportedMerkleTree(input: {
   poolContract: string;
   state: StateFile;
   handle: number;
@@ -64,11 +85,7 @@ export function bindImportedMerkleTree(input: {
 export async function bindPoolMerkleTree(
   state: StellarPoolMerkleState,
 ): Promise<number | undefined> {
-  const service = tryGetPrivacyPoolService();
-  if (!service) {
-    return undefined;
-  }
-  const sdk = asLeanImtSessionApi(await service.getInitializedSdk());
+  const sdk = await loadSessionSdk();
   if (!sdk) {
     return undefined;
   }
@@ -103,11 +120,7 @@ export async function resolveExtendedMerkleNodes(input: {
   ) {
     return cached.nodes;
   }
-  const service = tryGetPrivacyPoolService();
-  if (!service) {
-    return undefined;
-  }
-  const sdk = asLeanImtSessionApi(await service.getInitializedSdk());
+  const sdk = await loadSessionSdk();
   if (!sdk) {
     return undefined;
   }

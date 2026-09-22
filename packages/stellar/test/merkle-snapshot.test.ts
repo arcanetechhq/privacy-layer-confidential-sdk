@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CoinData, PrivacyPoolSDK } from '@arcanetech/stellar-privacy-pool-zk-sdk';
 import { extendMerkleSnapshotNodes } from '../src/transact/merkle/extend-snapshot.js';
 import type { LeanImtSessionApi } from '../src/transact/merkle/lean-imt-api.js';
 import { merkleSnapshotToStateFile } from '../src/transact/merkle/state-file.js';
-import { cachedMerkleUnchanged } from '../src/transact/merkle/persist-fetched.js';
 import {
-  bindImportedMerkleTree,
+  bindPoolMerkleTree,
+  registerMerkleSessionSdkHost,
   withdrawMerkleWitnessFromTree,
 } from '../src/transact/merkle/tree-session.js';
 
@@ -86,29 +86,25 @@ describe('merkleSnapshotToStateFile', () => {
   });
 });
 
-describe('cachedMerkleUnchanged', () => {
-  it('compares commitment count and root without joining leaves', () => {
-    const cached = {
-      commitments: ['1', '2'],
-      updatedAt: 1,
-      merkleRootHex: ROOT_HEX,
-    };
-    expect(cachedMerkleUnchanged(cached, ['1', '2'], ROOT_HEX)).toBe(true);
-    expect(cachedMerkleUnchanged(cached, ['1', '2', '3', '4'], ROOT_HEX)).toBe(false);
-    expect(cachedMerkleUnchanged(cached, ['1', '2'], 'bb'.repeat(32))).toBe(false);
-  });
-});
-
 describe('withdrawMerkleWitnessFromTree', () => {
-  it('prefers a bound session handle over rebuilding from leaves', () => {
+  afterEach(() => {
+    registerMerkleSessionSdkHost(undefined);
+  });
+
+  it('prefers a bound session handle over rebuilding from leaves', async () => {
     const session = fakeSession();
     const fromHandle = vi.fn(session.buildWithdrawMerkleWitnessFromHandle);
     session.buildWithdrawMerkleWitnessFromHandle = fromHandle;
     const rebuild = vi.fn(session.buildWithdrawMerkleWitnessFromHandle);
-    bindImportedMerkleTree({
+    registerMerkleSessionSdkHost({
+      getInitializedSdk: async () => session,
+    });
+    await bindPoolMerkleTree({
       poolContract: 'C-POOL',
-      handle: 7,
-      state: { commitments: ['1', '2'], root: '2' },
+      commitments: ['1', '2'],
+      commitmentCount: 2,
+      merkleRootHex: ROOT_HEX,
+      updatedAt: 1,
     });
     const sdk = {
       ...session,
@@ -125,7 +121,10 @@ describe('withdrawMerkleWitnessFromTree', () => {
     withdrawMerkleWitnessFromTree({
       sdk,
       coin,
-      state: { commitments: ['1', '2'], root: '2' },
+      state: merkleSnapshotToStateFile({
+        commitments: ['1', '2'],
+        merkleRootHex: ROOT_HEX,
+      }),
     });
     expect(fromHandle).toHaveBeenCalledOnce();
     expect(rebuild).not.toHaveBeenCalled();

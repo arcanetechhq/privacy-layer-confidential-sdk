@@ -13,7 +13,7 @@ export interface FetchContractMerkleResult {
   nodes?: StellarLeanImtNode[];
 }
 
-export function cachedMerkleUnchanged(
+function cachedMerkleUnchanged(
   cachedState: CachedPoolMerkleView | undefined,
   commitments: string[],
   merkleRootHex: string,
@@ -27,7 +27,7 @@ export function cachedMerkleUnchanged(
   return cachedState.merkleRootHex === merkleRootHex;
 }
 
-export function viewFromCachedMerkle(
+function viewFromCachedMerkle(
   cachedState: CachedPoolMerkleView,
   merkleRootHex: string,
 ): FetchContractMerkleResult {

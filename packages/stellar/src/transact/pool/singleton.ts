@@ -1,4 +1,5 @@
 import type { StellarBrowserAssets } from '../../types.js';
+import { registerMerkleSessionSdkHost } from '../merkle/tree-session.js';
 import { PrivacyPoolService } from '../pool/service.js';
 import type { StellarZkCircuitDefinition } from '../zk/circuit-config.js';
 
@@ -24,6 +25,7 @@ let configuredPrivacyPoolService: PrivacyPoolService | undefined;
 
 export function configurePrivacyPoolService(service: PrivacyPoolService): void {
   configuredPrivacyPoolService = service;
+  registerMerkleSessionSdkHost(service);
 }
 
 export function getPrivacyPoolService(): PrivacyPoolService {
@@ -32,9 +34,5 @@ export function getPrivacyPoolService(): PrivacyPoolService {
       'PrivacyPoolService is not configured. Call configurePrivacyPoolService first.',
     );
   }
-  return configuredPrivacyPoolService;
-}
-
-export function tryGetPrivacyPoolService(): PrivacyPoolService | undefined {
   return configuredPrivacyPoolService;
 }
