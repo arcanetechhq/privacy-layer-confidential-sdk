@@ -12,14 +12,11 @@ import {
   requireChangeRecipientWhenPartial,
   withdrawWitnessForCoin,
 } from '../../proofs/confidential/helpers.js';
-import { privKeyScalarDecimalFromRecipientScalarHex } from '../../encoding/priv-key-scalar-from-recipient-hex.js';
 import { buildPoolTransactionAuditParameters } from '../../audit/parameters.js';
 import type { KytApplicationIdHints } from '../../pool/proof-types.js';
 import {
   buildSenderTransferDepositsAndPublicInput,
   generatedOutputCoinFromSlot,
-  stampWithdrawEscrowLimbs,
-  sweepWithdrawStamp,
   type GeneratedOutputCoin,
 } from './shared.js';
 import type {
@@ -28,6 +25,11 @@ import type {
 } from '../../environment/types.js';
 import type { FeeOutputSpec } from '../../fees/append-fee-output.js';
 import { remainingAfterRequiredFee } from '../../fees/quote-fee-output-for-prepared.js';
+import {
+  spendWithdrawForTransfer,
+  transferDepositInputFromProof,
+} from './transfer-spend.js';
+
 type PrepareConfidentialTransferProofParameters = {
   coin: CoinData;
   state: StateFile;
@@ -134,37 +136,10 @@ type TransferProofInputs = {
   withdrawObject: ReturnType<typeof withdrawWitnessForCoin>['withdrawObject'];
   recipientSlot: SenderTransferBuild['recipientSlot'];
   deposits: SenderTransferBuild['deposits'];
-  changeCoin: SenderTransferBuild['changeCoin'];
-  feeCoin: SenderTransferBuild['feeCoin'];
+  changeCoin?: SenderTransferBuild['changeCoin'];
+  feeCoin?: SenderTransferBuild['feeCoin'];
   publicInput: SenderTransferBuild['publicInput'];
 };
-
-function confidentialEscrowFields(input: PrepareConfidentialTransferProofParameters) {
-  return {
-    ...(input.escrowSend ? { escrowSend: input.escrowSend } : {}),
-    ...(input.escrowClaimantLimbs
-      ? { escrowClaimantLimbs: input.escrowClaimantLimbs }
-      : {}),
-  };
-}
-
-function transferDepositInputFromProof(
-  input: PrepareConfidentialTransferProofParameters,
-  changeStroops: bigint,
-  stateRoot: string,
-) {
-  return {
-    senderPrivKeyScalarHex: input.senderPrivKeyScalarHex,
-    recipientPrivateAddressStpl1: input.recipientPrivateAddressStpl1,
-    transferStroops: input.transferStroops,
-    changeStroops,
-    selfPrivateAddressStpl1ForChange: input.selfPrivateAddressStpl1ForChange,
-    tokenAddress: input.tokenAddress,
-    stateRoot,
-    ...confidentialEscrowFields(input),
-    ...(input.feeOutput ? { feeOutput: input.feeOutput } : {}),
-  };
-}
 
 async function buildTransferProofInputs(parameters: {
   sdk: InitializedPrivacySdk;
@@ -178,36 +153,11 @@ async function buildTransferProofInputs(parameters: {
     parameters.input.selfPrivateAddressStpl1ForChange,
     parameters.input.feeOutput?.requiredFee ?? 0n,
   );
-  const privKeyScalar = privKeyScalarDecimalFromRecipientScalarHex(
-    parameters.input.senderPrivKeyScalarHex,
+  const { witness, withdrawObject } = spendWithdrawForTransfer(parameters);
+  const depositsBuild = await buildSenderTransferDepositsAndPublicInput(
+    transferDepositInputFromProof(parameters.input, changeStroops, witness.stateRoot),
   );
-  const { witness, withdrawObject } = withdrawWitnessForCoin({
-    sdk: parameters.sdk,
-    coin: parameters.input.coin,
-    state: parameters.input.state,
-    ownerPubHex: parameters.sdk.ecdhEphemeralPublicKeyFromScalarHex(
-      parameters.input.senderPrivKeyScalarHex,
-    ),
-    privKeyScalar,
-    applicationId: parameters.applicationId,
-  });
-  const stampedWithdraw = stampWithdrawEscrowLimbs(
-    withdrawObject,
-    sweepWithdrawStamp(confidentialEscrowFields(parameters.input)),
-  );
-  const { recipientSlot, deposits, changeCoin, feeCoin, publicInput } =
-    await buildSenderTransferDepositsAndPublicInput(
-      transferDepositInputFromProof(parameters.input, changeStroops, witness.stateRoot),
-    );
-  return {
-    witness,
-    withdrawObject: stampedWithdraw,
-    recipientSlot,
-    deposits,
-    changeCoin,
-    feeCoin,
-    publicInput,
-  };
+  return { witness, withdrawObject, ...depositsBuild };
 }
 
 export async function prepareConfidentialTransferProof(

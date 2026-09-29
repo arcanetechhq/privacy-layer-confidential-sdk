@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { deriveEscrowRecipientFromStellarAddress } from '../src/transact/escrow/derived-escrow-recipient.js';
 import { encodePrivateAddressFromHexCoordinates } from '../src/transact/private-address/codec.js';
+import { reconstructEscrowNote } from '../src/transact/escrow/reconstruct-escrow-note.js';
 
 const FIXED_G = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
 const DERIVED_ESCROW_FIXTURE = {
@@ -43,5 +44,48 @@ describe('deriveEscrowRecipientFromStellarAddress', () => {
         recipientStellarAddress: 'stpl1notanaccount',
       }),
     ).rejects.toThrow(/stellar g-address/i);
+  });
+
+  it('samples a high-entropy escrow nonce that round-trips through reconstruct', async () => {
+    const derived = await deriveEscrowRecipientFromStellarAddress({
+      recipientStellarAddress: FIXED_G,
+    });
+    expect(derived.nonceDecimal.length).toBeGreaterThanOrEqual(39);
+    expect(BigInt(derived.nonceDecimal) >= 1n << 127n).toBe(true);
+
+    let decryptCommitmentMatches: boolean | undefined;
+    const reconstructed = await reconstructEscrowNote({
+      claimantAddress: FIXED_G,
+      nonceDecimal: derived.nonceDecimal,
+      seq: 0,
+      events: [
+        {
+          outputIndex: 0,
+          commitmentHashHex: 'bb'.repeat(32),
+          createdEphemeralKey: ['1', '2'],
+          ciphertext: ['3', '4', '5', '6', '7', '8'],
+          tag: '9',
+        },
+      ],
+      decrypt: async (input) => {
+        expect(input.recipientScalarHex).toBe(derived.scalarHex);
+        const decrypted = {
+          value: '100',
+          assetHi: '4',
+          assetLo: '5',
+          nullifier: '1',
+          secret: '2',
+          applicationId: '0',
+          commitmentHex: 'cc'.repeat(32),
+          commitmentMatches: true,
+        };
+        decryptCommitmentMatches = decrypted.commitmentMatches;
+        return decrypted;
+      },
+    });
+    expect(decryptCommitmentMatches).toBe(true);
+    expect(reconstructed.nonceDecimal).toBe(derived.nonceDecimal);
+    expect(reconstructed.scalarHex).toBe(derived.scalarHex);
+    expect(reconstructed.coin.value).toBe('100');
   });
 });
