@@ -1,4 +1,7 @@
-import { canonicalBabyJubScalarFromInteger } from '@arcanetech/stellar-privacy-pool-zk-sdk';
+import {
+  canonicalBabyJubScalarFromInteger,
+  reduceDerivedEscrowSpendScalar,
+} from '@arcanetech/stellar-privacy-pool-zk-sdk';
 
 const SCALAR_HEX_CHAR_LENGTH = 64;
 const DECIMAL_RADIX = 10;
@@ -25,4 +28,30 @@ export function privKeyScalarDecimalFromRecipientScalarHex(hexInput: string): st
   const hex = normalizeRecipientScalarHex(hexInput);
   const value = BigInt(`0x${hex}`);
   return canonicalBabyJubScalarFromInteger(value).toString(DECIMAL_RADIX);
+}
+
+function privKeyScalarDecimalFromDerivedEscrowHex(hexInput: string): string {
+  const hex = normalizeRecipientScalarHex(hexInput);
+  const value = BigInt(`0x${hex}`);
+  return reduceDerivedEscrowSpendScalar(value).toString(DECIMAL_RADIX);
+}
+
+export function resolveTransferSpendScalars(input: {
+  senderPrivKeyScalarHex: string;
+  escrowSweep: boolean;
+}): { privKeyScalar: string; ownerScalarHex: string } {
+  const senderHex = input.senderPrivKeyScalarHex;
+  if (!input.escrowSweep) {
+    return {
+      privKeyScalar: privKeyScalarDecimalFromRecipientScalarHex(senderHex),
+      ownerScalarHex: senderHex,
+    };
+  }
+  const privKeyScalar = privKeyScalarDecimalFromDerivedEscrowHex(senderHex);
+  return {
+    privKeyScalar,
+    ownerScalarHex: BigInt(privKeyScalar)
+      .toString(16)
+      .padStart(SCALAR_HEX_CHAR_LENGTH, '0'),
+  };
 }

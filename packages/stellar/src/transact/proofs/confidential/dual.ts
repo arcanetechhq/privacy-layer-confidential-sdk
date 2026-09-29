@@ -9,6 +9,7 @@ import {
 } from '../../zk/slots.js';
 import {
   dualWithdrawLegsWithSharedRoot,
+  escrowSpendWitnessFromLimbs,
   MIN_CONFIDENTIAL_TRANSFER_STROOPS,
   requireChangeRecipientWhenPartial,
 } from '../../proofs/confidential/helpers.js';
@@ -21,7 +22,8 @@ import {
   sweepWithdrawStamp,
   type GeneratedOutputCoin,
 } from './shared.js';
-import { privKeyScalarDecimalFromRecipientScalarHex } from '../../encoding/priv-key-scalar-from-recipient-hex.js';
+import { resolveTransferSpendScalars } from '../../encoding/priv-key-scalar-from-recipient-hex.js';
+import { confidentialEscrowFields } from './transfer-spend.js';
 import type {
   TransferEscrowClaimantLimbs,
   TransferEscrowSend,
@@ -55,21 +57,13 @@ type PrepareConfidentialTransferProofDualResult = {
   changeCoin?: GeneratedOutputCoin;
 };
 
-function confidentialEscrowFields(
-  parameters: PrepareConfidentialTransferProofDualParameters,
-) {
-  return {
-    ...(parameters.escrowSend ? { escrowSend: parameters.escrowSend } : {}),
-    ...(parameters.escrowClaimantLimbs
-      ? { escrowClaimantLimbs: parameters.escrowClaimantLimbs }
-      : {}),
-  };
-}
-
 function stampDualWithdrawLegs(
   legs: ReturnType<typeof dualWithdrawLegsWithSharedRoot>,
   parameters: PrepareConfidentialTransferProofDualParameters,
 ) {
+  if (parameters.escrowClaimantLimbs) {
+    return legs;
+  }
   const escrowLimbs = sweepWithdrawStamp(confidentialEscrowFields(parameters));
   return {
     legA: {
@@ -168,12 +162,12 @@ async function buildDualTransferProofContext(
   >,
 ) {
   const changeStroops = dualTransferChangeStroops(parameters);
-  const privKeyScalar = privKeyScalarDecimalFromRecipientScalarHex(
-    parameters.senderPrivKeyScalarHex,
-  );
-  const ownerPubHex = sdk.ecdhEphemeralPublicKeyFromScalarHex(
-    parameters.senderPrivKeyScalarHex,
-  );
+  const limbs = parameters.escrowClaimantLimbs;
+  const { privKeyScalar, ownerScalarHex } = resolveTransferSpendScalars({
+    senderPrivKeyScalarHex: parameters.senderPrivKeyScalarHex,
+    escrowSweep: Boolean(limbs),
+  });
+  const ownerPubHex = sdk.ecdhEphemeralPublicKeyFromScalarHex(ownerScalarHex);
   const { legA, legB } = stampDualWithdrawLegs(
     dualWithdrawLegsWithSharedRoot({
       sdk,
@@ -183,6 +177,14 @@ async function buildDualTransferProofContext(
       ownerPubHex,
       privKeyScalar,
       applicationId,
+      ...(limbs
+        ? {
+            escrow: escrowSpendWitnessFromLimbs(
+              limbs,
+              parameters.senderPrivKeyScalarHex,
+            ),
+          }
+        : {}),
     }),
     parameters,
   );
