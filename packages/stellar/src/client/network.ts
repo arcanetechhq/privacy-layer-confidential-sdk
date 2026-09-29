@@ -34,6 +34,8 @@ function requireNetworkEnvironment(
   return transactEnvironment;
 }
 
+export { requireNetworkEnvironment };
+
 export async function checkRegistrationStatusWithEnvironment(input: {
   transactEnvironment: StellarTransactEnvironment | undefined;
   address: StellarAddress;

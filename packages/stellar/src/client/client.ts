@@ -32,6 +32,7 @@ export type StellarPrivacyClient = {
   registerPrivateAddress: StellarPrivacyClientNetwork['registerPrivateAddress'];
   resolveTransferRecipient: StellarPrivacyClientNetwork['resolveTransferRecipient'];
   checkPrivateRecordSpendStatus: StellarPrivacyClientNetwork['checkPrivateRecordSpendStatus'];
+  assessIncomingNote: StellarPrivacyClientNetwork['assessIncomingNote'];
   waitForTransactionConfirmation: StellarPrivacyClientNetwork['waitForTransactionConfirmation'];
   fetchTransactionConfirmationStatus: StellarPrivacyClientNetwork['fetchTransactionConfirmationStatus'];
   getTransactionDetails: StellarPrivacyClientNetwork['getTransactionDetails'];
@@ -62,6 +63,7 @@ export function createStellarPrivacyClientInstance(
       composed.network.resolveTransferRecipient(input),
     checkPrivateRecordSpendStatus: (input) =>
       composed.network.checkPrivateRecordSpendStatus(input),
+    assessIncomingNote: (input) => composed.network.assessIncomingNote(input),
     waitForTransactionConfirmation: (input) =>
       composed.network.waitForTransactionConfirmation(input),
     fetchTransactionConfirmationStatus: (txHash) =>

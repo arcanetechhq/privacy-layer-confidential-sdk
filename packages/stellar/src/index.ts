@@ -18,6 +18,11 @@ export type {
 } from './client/create.js';
 export type { StellarPrivacyClient } from './client/client.js';
 export type { StellarPrivacyStateHydration } from './client/hydrate-state.js';
+export type {
+  IncomingNoteAssessment,
+  IncomingNoteDeadReason,
+  IncomingNoteFields,
+} from './client/assess-incoming-note.js';
 export { stellarStateDefinitions } from './state/definitions/index.js';
 export {
   listWalletPrivateAddressRecordsForOwnerFromStateSnapshot,

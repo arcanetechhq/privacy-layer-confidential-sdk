@@ -1,6 +1,8 @@
 import type { StellarAddress } from '../types.js';
 import type { StellarStateService } from '../state/index.js';
 import type { StellarTransactEnvironment } from '../transact/environment/types.js';
+import { assessIncomingNoteWithEnvironment } from './assess-incoming-note-network.js';
+import type { AssessIncomingNoteClientInput } from './assess-incoming-note-network.js';
 import {
   checkPrivateRecordSpendStatusWithEnvironment,
   checkRegistrationStatusWithEnvironment,
@@ -84,6 +86,21 @@ function createRegistryNetworkFacet(input: {
   };
 }
 
+function createAssessmentNetworkFacet(input: {
+  transactEnvironment: StellarTransactEnvironment | undefined;
+  state: StellarStateService;
+}) {
+  const { transactEnvironment, state } = input;
+  return {
+    assessIncomingNote: (assessmentInput: AssessIncomingNoteClientInput) =>
+      assessIncomingNoteWithEnvironment({
+        transactEnvironment,
+        state,
+        ...assessmentInput,
+      }),
+  };
+}
+
 function createRpcNetworkFacet(input: {
   transactEnvironment: StellarTransactEnvironment | undefined;
 }) {
@@ -137,6 +154,7 @@ export function createNetworkFacet(input: {
   return {
     ...createPoolNetworkFacet(input),
     ...createRegistryNetworkFacet(input),
+    ...createAssessmentNetworkFacet(input),
     ...createRpcNetworkFacet(input),
   };
 }
