@@ -247,4 +247,39 @@ describe('release-dry-run line 1 plan', () => {
     assertPackedDryRun(result.stdout);
     assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
   });
+
+  it('after simulated promotion, fix prints stable 1.0.1 on latest', () => {
+    const result = runReleaseDryRun({
+      releaseLine: '1',
+      commitMessage: 'fix: example',
+      stable1xPublished: '1',
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /\bversion:\s*1\.0\.1\b/);
+    assert.match(result.stdout, /\blatest\b/);
+    assert.doesNotMatch(result.stdout, /\bnext\b/);
+    assert.doesNotMatch(result.stdout, /\bv0\b/);
+    assert.match(result.stdout, /^zk-sdk-range:\s*>=1\.0\.0 <2\.0\.0$/m);
+    assert.match(result.stdout, LINE_1_MANIFEST_PATTERN);
+    assert.match(result.stdout, STELLAR_SELECTED_PATTERN);
+    assert.match(result.stdout, CORE_STATE_RELAY_SKIPPED_PATTERN);
+    assertPackedDryRun(result.stdout);
+    assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
+  });
+
+  it('after simulated promotion, feat prints stable 1.1.0 on latest', () => {
+    const result = runReleaseDryRun({
+      releaseLine: '1',
+      commitMessage: 'feat: example',
+      stable1xPublished: '1',
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /\bversion:\s*1\.1\.0\b/);
+    assert.match(result.stdout, /\blatest\b/);
+    assert.doesNotMatch(result.stdout, /\bnext\b/);
+    assert.match(result.stdout, /^zk-sdk-range:\s*>=1\.0\.0 <2\.0\.0$/m);
+    assert.match(result.stdout, STELLAR_SELECTED_PATTERN);
+    assertPackedDryRun(result.stdout);
+    assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
+  });
 });

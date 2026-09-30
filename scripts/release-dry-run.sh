@@ -56,10 +56,15 @@ print(deps.get(os.environ["ZK_SDK_DEP"]) or "")
 PY
 )"
 
-# This checkout is the 0.x line: package.json must keep the 0.x zk window.
-# Line 1 only *plans* the 1.x range; dry-run must not rewrite package.json.
-if [[ "$current_zk_range" != "$LINE_0_ZK_RANGE" ]]; then
-  echo "Stellar package zk SDK range must be ${LINE_0_ZK_RANGE}, found: ${current_zk_range}" >&2
+# Line 0 requires the 0.x zk window. Line 1 dry-run may run on a 0.x checkout
+# (plan only) or on a tree that already carries the 1.x window after apply.
+if [[ "$RELEASE_LINE" == "0" ]]; then
+  if [[ "$current_zk_range" != "$LINE_0_ZK_RANGE" ]]; then
+    echo "Stellar package zk SDK range must be ${LINE_0_ZK_RANGE}, found: ${current_zk_range}" >&2
+    exit 1
+  fi
+elif [[ "$current_zk_range" != "$LINE_0_ZK_RANGE" && "$current_zk_range" != "$LINE_1_ZK_RANGE" ]]; then
+  echo "Stellar package zk SDK range must be ${LINE_0_ZK_RANGE} or ${LINE_1_ZK_RANGE}, found: ${current_zk_range}" >&2
   exit 1
 fi
 
@@ -279,7 +284,10 @@ print("protected-path: allow")
 PY
 
 if [[ "$DRY_RUN" == "0" ]]; then
-  PACKAGE_JSON="$PACKAGE_JSON" PLAN_FILE="$PLAN_FILE" python3 - <<'PY'
+  PACKAGE_JSON="$PACKAGE_JSON" \
+  PLAN_FILE="$PLAN_FILE" \
+  ZK_SDK_DEP="$ZK_SDK_DEP" \
+  python3 - <<'PY'
 import json
 import os
 import sys
@@ -290,19 +298,25 @@ if not version:
     print("release plan has no publishable version", file=sys.stderr)
     sys.exit(1)
 path = os.environ["PACKAGE_JSON"]
+zk_dep = os.environ["ZK_SDK_DEP"]
+zk_range = plan.get("zkSdkRange")
 with open(path, encoding="utf-8") as handle:
     data = json.load(handle)
 data["version"] = version
+if zk_range:
+    deps = data.setdefault("dependencies", {})
+    deps[zk_dep] = zk_range
 with open(path, "w", encoding="utf-8") as handle:
     json.dump(data, handle, indent=2)
     handle.write("\n")
 print(f"applied version: {version}")
+if zk_range:
+    print(f"applied zk-sdk-range: {zk_range}")
 print("mode: publish")
 print("skipped: git tag, GitHub release, npm publish")
 PY
   exit 0
 fi
-
 (
   cd "$ROOT"
   npm pack --workspace @arcanetech/privacy-sdk-stellar --dry-run
