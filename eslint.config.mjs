@@ -18,6 +18,7 @@ export default defineConfig([
       'node_modules/**',
       'coverage/**',
       '.cursor/**',
+      '.scratch/**',
       'docs/**',
       'eslint.config.mjs',
       '**/*.config.ts',
