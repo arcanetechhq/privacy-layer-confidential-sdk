@@ -9,11 +9,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_JSON="$ROOT/packages/stellar/package.json"
 ZK_SDK_DEP="@arcanetech/stellar-privacy-pool-zk-sdk"
 EXPECTED_ZK_RANGE=">=0.11.0 <1.0.0"
+LINE_0_MANIFEST="stellar/v0/circuits-manifest.json"
 
 DRY_RUN="${DRY_RUN:-1}"
 RELEASE_LINE="${RELEASE_LINE:-}"
 COMMIT_MESSAGE="${COMMIT_MESSAGE:-}"
-STABLE_1X_PUBLISHED="${STABLE_1X_PUBLISHED:-0}"
 
 if [[ "$DRY_RUN" != "0" && "$DRY_RUN" != "1" ]]; then
   echo "DRY_RUN must be 0 or 1" >&2
@@ -58,7 +58,7 @@ trap 'rm -f "$PLAN_FILE"' EXIT
 COMMIT_MESSAGE="$COMMIT_MESSAGE" \
 CURRENT_VERSION="$current_version" \
 RELEASE_LINE="$RELEASE_LINE" \
-STABLE_1X_PUBLISHED="$STABLE_1X_PUBLISHED" \
+LINE_0_MANIFEST="$LINE_0_MANIFEST" \
 PLAN_FILE="$PLAN_FILE" \
 python3 - <<'PY'
 import json
@@ -69,7 +69,7 @@ import sys
 message = os.environ["COMMIT_MESSAGE"]
 version = os.environ["CURRENT_VERSION"]
 release_line = os.environ["RELEASE_LINE"]
-stable_1x_published = os.environ.get("STABLE_1X_PUBLISHED", "0") == "1"
+line_0_manifest = os.environ["LINE_0_MANIFEST"]
 plan_file = os.environ["PLAN_FILE"]
 
 breaking = bool(re.search(r"^(\w+)(\(.+\))?!:", message, re.M)) or (
@@ -89,10 +89,11 @@ def commit_kind(msg: str) -> str:
     kind_match = re.match(r"^(\w+)(\(.+\))?!?:", first)
     return kind_match.group(1) if kind_match else ""
 
-def write_plan(next_version: str | None, dist_tags: str | None, breaking_verdict: str):
+def write_plan(next_version: str | None, dist_tags: str | None, manifest: str, breaking_verdict: str):
     plan = {
         "version": next_version,
         "distTags": dist_tags.split() if dist_tags else [],
+        "circuitsManifest": manifest,
         "breakingCommit": breaking_verdict,
     }
     with open(plan_file, "w", encoding="utf-8") as handle:
@@ -101,8 +102,9 @@ def write_plan(next_version: str | None, dist_tags: str | None, breaking_verdict
 
 if release_line == "0":
     if breaking:
-        write_plan(None, None, "refuse")
+        write_plan(None, None, line_0_manifest, "refuse")
         print("breaking-commit: refuse")
+        print(f"circuits-manifest: {line_0_manifest}")
         print("protected-path: allow")
         sys.exit(1)
 
@@ -118,13 +120,11 @@ if release_line == "0":
         sys.exit(1)
 
     next_version = f"{major}.{minor}.{patch}"
-    if stable_1x_published:
-        dist_tags = "v0"
-    else:
-        dist_tags = "v0 latest"
-    write_plan(next_version, dist_tags, "allow")
+    dist_tags = "v0 latest"
+    write_plan(next_version, dist_tags, line_0_manifest, "allow")
     print(f"version: {next_version}")
     print(f"dist-tags: {dist_tags}")
+    print(f"circuits-manifest: {line_0_manifest}")
     print("breaking-commit: allow")
     print("protected-path: allow")
     sys.exit(0)
@@ -132,17 +132,6 @@ if release_line == "0":
 print(f"RELEASE_LINE={release_line} is not supported yet", file=sys.stderr)
 sys.exit(1)
 PY
-
-if [[ -n "${GITHUB_OUTPUT:-}" && -f "$PLAN_FILE" ]]; then
-  python3 - "$PLAN_FILE" >>"$GITHUB_OUTPUT" <<'PY'
-import json, sys
-plan = json.load(open(sys.argv[1], encoding="utf-8"))
-version = plan.get("version") or ""
-dist_tags = " ".join(plan.get("distTags") or [])
-print(f"version={version}")
-print(f"dist_tags={dist_tags}")
-PY
-fi
 
 if [[ "$DRY_RUN" == "0" ]]; then
   PACKAGE_JSON="$PACKAGE_JSON" PLAN_FILE="$PLAN_FILE" python3 - <<'PY'
