@@ -3,7 +3,8 @@ name: Version
 on:
   push:
     branches:
-      - main
+      - development
+      - v1
 
 permissions:
   contents: write

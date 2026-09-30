@@ -1,10 +1,21 @@
 name: Release
 
 on:
+  pull_request:
+    branches:
+      - development
+      - v1
   push:
     branches:
-      - main
+      - development
+      - v1
   workflow_dispatch:
+    inputs:
+      promote_stable:
+        description: Promote the 1.x line to stable 1.0.0 and move latest (v1 branch only)
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: write
@@ -12,10 +23,74 @@ permissions:
   pull-requests: write
 
 jobs:
-  release:
+  dry-run:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - run: npm install
+
+      - run: npm run build
+
+      - name: Resolve release line from base branch
+        id: line
+        run: |
+          set -euo pipefail
+          base="${{ github.base_ref }}"
+          case "$base" in
+            development) echo "release_line=0" >> "$GITHUB_OUTPUT" ;;
+            v1) echo "release_line=1" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "Unsupported pull request base branch: $base (expected development or v1)" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Detect whether stable 1.x is already published
+        id: stable1
+        run: |
+          set -euo pipefail
+          if ! versions_json="$(npm view "@arcanetech/privacy-sdk-stellar" versions --json 2>/dev/null)"; then
+            echo "could not read npm package versions; refusing to guess STABLE_1X_PUBLISHED" >&2
+            exit 1
+          fi
+          if printf '%s' "$versions_json" | python3 -c 'import json,sys; versions=json.load(sys.stdin); sys.exit(0 if any(isinstance(v,str) and v.startswith("1.") and "-" not in v for v in versions) else 1)'; then
+            echo "published=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rehearse release plan (dry-run)
+        env:
+          DRY_RUN: "1"
+          RELEASE_LINE: ${{ steps.line.outputs.release_line }}
+          STABLE_1X_PUBLISHED: ${{ steps.stable1.outputs.published }}
+          PROMOTE_STABLE: "0"
+        run: |
+          set -euo pipefail
+          chmod +x scripts/*.sh
+          COMMIT_MESSAGE="$(git log -1 --pretty=%B)"
+          export COMMIT_MESSAGE
+          scripts/release-dry-run.sh
+
+  publish:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -26,12 +101,98 @@ jobs:
 
       - run: npm run verify
 
-      - run: npm pack --workspace @arcanetech/privacy-sdk-core --dry-run
-      - run: npm pack --workspace @arcanetech/privacy-sdk-relay --dry-run
-      - run: npm pack --workspace @arcanetech/privacy-sdk-stellar --dry-run
-      - run: npm pack --workspace @arcanetech/privacy-sdk-state-redux --dry-run
-      - run: npm pack --workspace @arcanetech/privacy-sdk-state-memory --dry-run
+      - name: Resolve release line from branch
+        id: line
+        run: |
+          set -euo pipefail
+          ref="${GITHUB_REF_NAME}"
+          case "$ref" in
+            development) echo "release_line=0" >> "$GITHUB_OUTPUT" ;;
+            v1) echo "release_line=1" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "Unsupported branch for publish: $ref (expected development or v1)" >&2
+              exit 1
+              ;;
+          esac
 
-      - name: Publish workspace packages
-        if: "${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'chore: release main') }}"
+      - name: Guard promotion to the 1.x branch
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.promote_stable }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ steps.line.outputs.release_line }}" != "1" ]]; then
+            echo "Manual promotion is only allowed on the v1 branch" >&2
+            exit 1
+          fi
+
+      - name: Detect whether stable 1.x is already published
+        id: stable1
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! versions_json="$(npm view "@arcanetech/privacy-sdk-stellar" versions --json 2>/dev/null)"; then
+            echo "could not read npm package versions; refusing to guess STABLE_1X_PUBLISHED" >&2
+            exit 1
+          fi
+          if printf '%s' "$versions_json" | python3 -c 'import json,sys; versions=json.load(sys.stdin); sys.exit(0 if any(isinstance(v,str) and v.startswith("1.") and "-" not in v for v in versions) else 1)'; then
+            echo "published=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Select version with the release script
+        id: release
+        env:
+          DRY_RUN: "0"
+          RELEASE_LINE: ${{ steps.line.outputs.release_line }}
+          STABLE_1X_PUBLISHED: ${{ steps.stable1.outputs.published }}
+          PROMOTE_STABLE: ${{ github.event_name == 'workflow_dispatch' && inputs.promote_stable && '1' || '0' }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/*.sh
+          if [[ "${PROMOTE_STABLE}" == "1" ]]; then
+            export COMMIT_MESSAGE="chore: promote"
+          else
+            COMMIT_MESSAGE="$(git log -1 --pretty=%B)"
+            export COMMIT_MESSAGE
+          fi
+          plan_out="$(scripts/release-dry-run.sh)"
+          printf '%s\n' "$plan_out"
+          version="$(python3 -c 'import json; print(json.load(open("packages/stellar/package.json"))["version"])')"
+          dist_tags="$(printf '%s\n' "$plan_out" | awk -F': ' '/^dist-tags:/{print $2; exit}')"
+          selected="$(printf '%s\n' "$plan_out" | awk -F': ' '/^publish-selected:/{print $2; exit}')"
+          if [[ -z "$selected" ]]; then
+            echo "release script did not print publish-selected" >&2
+            exit 1
+          fi
+          if [[ -z "$dist_tags" ]]; then
+            echo "release script did not print dist-tags" >&2
+            exit 1
+          fi
+          echo "selected version ${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "dist_tags=${dist_tags}" >> "$GITHUB_OUTPUT"
+          echo "publish_selected=${selected}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit selected Stellar package version
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/stellar/package.json
+          if git diff --cached --quiet; then
+            echo "package.json already at ${VERSION}"
+          else
+            git commit -m "ci: release v${VERSION} [skip ci]"
+            git push origin "HEAD:refs/heads/${BRANCH}"
+          fi
+
+      - name: Publish selected workspace packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PUBLISH_PACKAGES: ${{ steps.release.outputs.publish_selected }}
+          DIST_TAGS: ${{ steps.release.outputs.dist_tags }}
         run: bash scripts/publish-workspace-packages.sh

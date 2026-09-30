@@ -7,6 +7,7 @@ import {
   CORE_STATE_RELAY_SKIPPED_PATTERN,
   EXPECTED_ZK_RANGE,
   LINE_0_MANIFEST_PATTERN,
+  LINE_0_SELECTED_PATTERN,
   LINE_1_MANIFEST_PATTERN,
   listGitTags,
   packageJsonPath,
@@ -35,6 +36,11 @@ describe('release-dry-run line 0 plan', { timeout: 30_000 }, () => {
     assert.match(result.stdout, /\bv0\b/);
     assert.match(result.stdout, /\blatest\b/);
     assert.match(result.stdout, LINE_0_MANIFEST_PATTERN);
+    assert.match(result.stdout, LINE_0_SELECTED_PATTERN);
+    assert.match(result.stdout, /privacy-sdk-core/);
+    assert.match(result.stdout, /privacy-sdk-relay/);
+    assert.match(result.stdout, /privacy-sdk-state/);
+    assert.doesNotMatch(result.stdout, CORE_STATE_RELAY_SKIPPED_PATTERN);
     assert.match(result.stdout, /^breaking-commit: allow$/m);
     assert.match(result.stdout, /^protected-path: allow$/m);
     assertPackedDryRun(result.stdout);

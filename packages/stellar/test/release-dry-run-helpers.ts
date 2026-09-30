@@ -29,6 +29,8 @@ export const LINE_1_MANIFEST_PATTERN =
   /^circuits-manifest:\s*stellar\/v1\/circuits-manifest\.json$/m;
 export const STELLAR_SELECTED_PATTERN =
   /^publish-selected:\s*@arcanetech\/privacy-sdk-stellar$/m;
+export const LINE_0_SELECTED_PATTERN =
+  /^publish-selected:.*privacy-sdk-stellar.*privacy-sdk-core.*(?:privacy-sdk-state|privacy-sdk-relay)/im;
 export const CORE_STATE_RELAY_SKIPPED_PATTERN =
   /^publish-skipped:.*(?:core|state|relay)/im;
 export const STELLAR_PACKAGE_JSON = 'packages/stellar/package.json';

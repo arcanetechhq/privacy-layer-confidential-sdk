@@ -17,6 +17,7 @@ LINE_1_ZK_RANGE=">=1.0.0 <2.0.0"
 LINE_0_MANIFEST="stellar/v0/circuits-manifest.json"
 LINE_1_MANIFEST="stellar/v1/circuits-manifest.json"
 STELLAR_PKG="@arcanetech/privacy-sdk-stellar"
+LINE_0_PKGS="@arcanetech/privacy-sdk-stellar @arcanetech/privacy-sdk-core @arcanetech/privacy-sdk-relay @arcanetech/privacy-sdk-state-memory @arcanetech/privacy-sdk-state-redux"
 SKIPPED_PKGS="@arcanetech/privacy-sdk-core @arcanetech/privacy-sdk-relay @arcanetech/privacy-sdk-state-memory @arcanetech/privacy-sdk-state-redux"
 
 DRY_RUN="${DRY_RUN:-1}"
@@ -92,6 +93,7 @@ LINE_1_MANIFEST="$LINE_1_MANIFEST" \
 LINE_0_ZK_RANGE="$LINE_0_ZK_RANGE" \
 LINE_1_ZK_RANGE="$LINE_1_ZK_RANGE" \
 STELLAR_PKG="$STELLAR_PKG" \
+LINE_0_PKGS="$LINE_0_PKGS" \
 SKIPPED_PKGS="$SKIPPED_PKGS" \
 PLAN_FILE="$PLAN_FILE" \
 python3 - <<'PY'
@@ -110,6 +112,7 @@ line_1_manifest = os.environ["LINE_1_MANIFEST"]
 line_0_zk_range = os.environ["LINE_0_ZK_RANGE"]
 line_1_zk_range = os.environ["LINE_1_ZK_RANGE"]
 stellar_pkg = os.environ["STELLAR_PKG"]
+line_0_pkgs = os.environ["LINE_0_PKGS"].split()
 skipped_pkgs = os.environ["SKIPPED_PKGS"]
 plan_file = os.environ["PLAN_FILE"]
 
@@ -152,6 +155,9 @@ def write_plan(
         json.dump(plan, handle)
         handle.write("\n")
 
+def print_line0_selection():
+    print(f"publish-selected: {' '.join(line_0_pkgs)}")
+
 def print_line1_selection():
     print(f"publish-selected: {stellar_pkg}")
     print(f"publish-skipped: {skipped_pkgs}")
@@ -164,12 +170,13 @@ if release_line == "0":
             line_0_manifest,
             "refuse",
             line_0_zk_range,
-            [stellar_pkg],
+            line_0_pkgs,
             [],
         )
         print("breaking-commit: refuse")
         print(f"circuits-manifest: {line_0_manifest}")
         print(f"zk-sdk-range: {line_0_zk_range}")
+        print_line0_selection()
         print("protected-path: allow")
         sys.exit(1)
 
@@ -195,13 +202,14 @@ if release_line == "0":
         line_0_manifest,
         "allow",
         line_0_zk_range,
-        [stellar_pkg],
+        line_0_pkgs,
         [],
     )
     print(f"version: {next_version}")
     print(f"dist-tags: {dist_tags}")
     print(f"circuits-manifest: {line_0_manifest}")
     print(f"zk-sdk-range: {line_0_zk_range}")
+    print_line0_selection()
     print("breaking-commit: allow")
     sys.exit(0)
 
