@@ -64,6 +64,7 @@ export function runReleaseDryRun({
   mergeFrom,
   mergeInto,
   mergeRepo,
+  dryRun = '1',
 }: {
   releaseLine: string;
   commitMessage: string;
@@ -72,10 +73,11 @@ export function runReleaseDryRun({
   mergeFrom?: string;
   mergeInto?: string;
   mergeRepo?: string;
+  dryRun?: '0' | '1';
 }) {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
-    DRY_RUN: '1',
+    DRY_RUN: dryRun,
     RELEASE_LINE: releaseLine,
     COMMIT_MESSAGE: commitMessage,
   };

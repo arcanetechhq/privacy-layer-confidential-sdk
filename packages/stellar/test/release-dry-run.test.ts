@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, it } from 'vitest';
 import {
   assertNoLocalSideEffects,
@@ -12,6 +13,7 @@ import {
   listGitTags,
   packageJsonPath,
   readZkSdkRange,
+  root,
   runReleaseDryRun,
   STELLAR_SELECTED_PATTERN,
   tarballCount,
@@ -102,6 +104,59 @@ describe('release-dry-run line 0 plan', { timeout: 30_000 }, () => {
     assert.match(result.stdout, /^release: skip$/m);
     assert.doesNotMatch(result.stdout, /\bversion:\s*\d+/);
     assert.doesNotMatch(result.stdout, /\bnpm publish\b/);
+    assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
+  });
+
+  it('does not let release-please choose or bump versions on development or v1', () => {
+    const workflowsDirectory = path.join(root, '.github/workflows');
+    const workflowFiles = readdirSync(workflowsDirectory).filter((name) =>
+      /\.ya?ml$/i.test(name),
+    );
+    assert.ok(workflowFiles.length > 0, 'expected release workflows');
+    for (const name of workflowFiles) {
+      const body = readFileSync(path.join(workflowsDirectory, name), 'utf8');
+      assert.doesNotMatch(
+        body,
+        /googleapis\/release-please-action/,
+        `${name} must not run release-please beside the release script`,
+      );
+      assert.doesNotMatch(
+        body,
+        /\brelease-please\b/,
+        `${name} must not invoke release-please on development or v1`,
+      );
+    }
+  });
+
+  it('publish mode applies the script-selected version without npm publish', () => {
+    try {
+      const result = runReleaseDryRun({
+        releaseLine: '0',
+        commitMessage: 'fix: example',
+        dryRun: '0',
+      });
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      assert.match(result.stdout, /\bversion:\s*0\.6\.2\b/);
+      assert.match(result.stdout, /\bv0\b/);
+      assert.match(result.stdout, LINE_0_SELECTED_PATTERN);
+      assert.match(result.stdout, /^mode: publish$/m);
+      assert.match(result.stdout, /skipped:.*npm publish/i);
+      assert.doesNotMatch(result.stdout, /packed current package tree/);
+      assert.doesNotMatch(result.stdout, /^Would publish /m);
+      const applied = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
+        version: string;
+        dependencies: Record<string, string>;
+      };
+      assert.equal(applied.version, '0.6.2');
+      assert.equal(
+        applied.dependencies['@arcanetech/stellar-privacy-pool-zk-sdk'],
+        EXPECTED_ZK_RANGE,
+      );
+      assert.equal(listGitTags(), tagsBefore);
+      assert.equal(tarballCount(), tarballsBefore);
+    } finally {
+      writeFileSync(packageJsonPath, packageBefore);
+    }
     assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
   });
 

@@ -97,9 +97,9 @@ Site configuration is in [`docs/docs.json`](./docs/docs.json). The repository ro
 
 ## Release Process
 
-- Conventional Commits drive version bumps through Release Please.
-- `.github/workflows/version.yml` opens release PRs.
-- `.github/workflows/release.yml` verifies, builds, and publishes workspace packages.
+- Conventional Commits drive version, dist-tag, and publish selection through `scripts/release-dry-run.sh`.
+- Pull requests against `development` or `v1` rehearse that script in dry-run mode (no registry write).
+- Pushes to `development` or `v1` (and manual v1 promotion) publish through the same script via `.github/workflows/release.yml`.
 
 ## Package READMEs
 
