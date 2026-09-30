@@ -188,6 +188,7 @@ jobs:
         env:
           VERSION: ${{ steps.release.outputs.version }}
           BRANCH: ${{ github.ref_name }}
+          LEFTHOOK: "0"
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
