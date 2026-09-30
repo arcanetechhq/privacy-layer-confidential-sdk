@@ -13,6 +13,11 @@ const ZK_SDK_DEP = '@arcanetech/stellar-privacy-pool-zk-sdk';
 const EXPECTED_ZK_RANGE = '>=0.11.0 <1.0.0';
 const LINE_0_MANIFEST_PATTERN =
   /^circuits-manifest:\s*stellar\/v0\/circuits-manifest\.json$/m;
+const LINE_1_MANIFEST_PATTERN =
+  /^circuits-manifest:\s*stellar\/v1\/circuits-manifest\.json$/m;
+const STELLAR_SELECTED_PATTERN =
+  /^publish-selected:\s*@arcanetech\/privacy-sdk-stellar$/m;
+const CORE_STATE_RELAY_SKIPPED_PATTERN = /^publish-skipped:.*(?:core|state|relay)/im;
 const GIT_CANDIDATES = [
   '/usr/bin/git',
   '/opt/homebrew/bin/git',
@@ -36,19 +41,30 @@ const gitBinary = resolveGitBinary();
 function runReleaseDryRun({
   releaseLine,
   commitMessage,
+  promoteStable,
+  stable1xPublished,
 }: {
   releaseLine: string;
   commitMessage: string;
+  promoteStable?: string;
+  stable1xPublished?: string;
 }) {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    DRY_RUN: '1',
+    RELEASE_LINE: releaseLine,
+    COMMIT_MESSAGE: commitMessage,
+  };
+  if (promoteStable !== undefined) {
+    env.PROMOTE_STABLE = promoteStable;
+  }
+  if (stable1xPublished !== undefined) {
+    env.STABLE_1X_PUBLISHED = stable1xPublished;
+  }
   return spawnSync(script, [], {
     cwd: root,
     encoding: 'utf8',
-    env: {
-      ...process.env,
-      DRY_RUN: '1',
-      RELEASE_LINE: releaseLine,
-      COMMIT_MESSAGE: commitMessage,
-    },
+    env,
   });
 }
 
@@ -148,9 +164,9 @@ describe('release-dry-run line 0 plan', () => {
     assert.equal(typeof result.status, 'number');
     assert.match(result.stdout, /^breaking-commit: refuse$/m);
     assert.match(result.stdout, LINE_0_MANIFEST_PATTERN);
-    assert.doesNotMatch(result.stdout, /\bversion:\s*\d+\.\d+\.\d+\b/);
-    assert.doesNotMatch(result.stdout, /\b0\.7\.0\b/);
-    assert.doesNotMatch(result.stdout, /\b1\.0\.0\b/);
+    assert.doesNotMatch(result.stdout, /\bversion:\s*\d+\.\d+\.\d+/);
+    assert.doesNotMatch(result.stdout, /\bversion:\s*0\.7\.0\b/);
+    assert.doesNotMatch(result.stdout, /\bversion:\s*1\.0\.0\b/);
     assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
   });
 
@@ -163,9 +179,72 @@ describe('release-dry-run line 0 plan', () => {
     assert.equal(typeof result.status, 'number');
     assert.match(result.stdout, /^breaking-commit: refuse$/m);
     assert.match(result.stdout, LINE_0_MANIFEST_PATTERN);
-    assert.doesNotMatch(result.stdout, /\bversion:\s*\d+\.\d+\.\d+\b/);
-    assert.doesNotMatch(result.stdout, /\b0\.7\.0\b/);
-    assert.doesNotMatch(result.stdout, /\b1\.0\.0\b/);
+    assert.doesNotMatch(result.stdout, /\bversion:\s*\d+\.\d+\.\d+/);
+    assert.doesNotMatch(result.stdout, /\bversion:\s*0\.7\.0\b/);
+    assert.doesNotMatch(result.stdout, /\bversion:\s*1\.0\.0\b/);
+    assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
+  });
+
+  it('after stable 1.x exists, prints dist-tag v0 and does not take latest', () => {
+    const result = runReleaseDryRun({
+      releaseLine: '0',
+      commitMessage: 'fix: example',
+      stable1xPublished: '1',
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /\bversion:\s*0\.6\.2\b/);
+    assert.match(result.stdout, /\bv0\b/);
+    assert.doesNotMatch(result.stdout, /\blatest\b/);
+    assert.match(result.stdout, LINE_0_MANIFEST_PATTERN);
+    assertPackedDryRun(result.stdout);
+    assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
+  });
+});
+
+describe('release-dry-run line 1 plan', () => {
+  const packageBefore = readFileSync(packageJsonPath, 'utf8');
+  const tagsBefore = listGitTags();
+  const tarballsBefore = tarballCount();
+
+  it('before promotion prints 1.0.0-rc.0, dist-tag next, and line-1 zk range', () => {
+    const result = runReleaseDryRun({
+      releaseLine: '1',
+      commitMessage: 'feat!: shapes',
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /\bversion:\s*1\.0\.0-rc\.0\b/);
+    assert.match(result.stdout, /\bnext\b/);
+    assert.doesNotMatch(result.stdout, /\blatest\b/);
+    assert.match(result.stdout, /^zk-sdk-range:\s*>=1\.0\.0 <2\.0\.0$/m);
+    assert.match(result.stdout, LINE_1_MANIFEST_PATTERN);
+    assert.match(result.stdout, STELLAR_SELECTED_PATTERN);
+    assert.match(result.stdout, CORE_STATE_RELAY_SKIPPED_PATTERN);
+    assert.match(result.stdout, /privacy-sdk-core/);
+    assert.match(result.stdout, /privacy-sdk-relay/);
+    assert.match(result.stdout, /privacy-sdk-state/);
+    assert.match(result.stdout, /^breaking-commit: allow$/m);
+    assert.match(result.stdout, /^protected-path: allow$/m);
+    assertPackedDryRun(result.stdout);
+    assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
+  });
+
+  it('manual promotion prints stable 1.0.0 and dist-tag latest', () => {
+    const result = runReleaseDryRun({
+      releaseLine: '1',
+      commitMessage: 'chore: promote',
+      promoteStable: '1',
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /\bversion:\s*1\.0\.0\b/);
+    assert.doesNotMatch(result.stdout, /\b1\.0\.0-rc\./);
+    assert.match(result.stdout, /\blatest\b/);
+    assert.doesNotMatch(result.stdout, /\bnext\b/);
+    assert.doesNotMatch(result.stdout, /\bv0\b/);
+    assert.match(result.stdout, /^zk-sdk-range:\s*>=1\.0\.0 <2\.0\.0$/m);
+    assert.match(result.stdout, LINE_1_MANIFEST_PATTERN);
+    assert.match(result.stdout, STELLAR_SELECTED_PATTERN);
+    assert.match(result.stdout, CORE_STATE_RELAY_SKIPPED_PATTERN);
+    assertPackedDryRun(result.stdout);
     assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
   });
 });
