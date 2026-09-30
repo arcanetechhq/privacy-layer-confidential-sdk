@@ -99,6 +99,10 @@ jobs:
 
       - run: npm install
 
+      - name: Install the 1.x zk SDK for typecheck
+        if: github.ref_name == 'v1'
+        run: npm install --no-save --workspace @arcanetech/privacy-sdk-stellar @arcanetech/stellar-privacy-pool-zk-sdk@1.0.0-rc.0
+
       - run: npm run verify
 
       - name: Resolve release line from branch

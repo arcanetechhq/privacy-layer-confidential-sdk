@@ -99,8 +99,17 @@ export function runReleaseDryRun({
   return spawnSync(script, [], {
     cwd: root,
     encoding: 'utf8',
-    env,
+    env: isolatedGitEnv(env),
   });
+}
+
+function isolatedGitEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const isolated = { ...env };
+  delete isolated.GIT_DIR;
+  delete isolated.GIT_WORK_TREE;
+  delete isolated.GIT_INDEX_FILE;
+  delete isolated.GIT_PREFIX;
+  return isolated;
 }
 
 export function git(cwd: string, args: string[]): string {
@@ -110,12 +119,12 @@ export function git(cwd: string, args: string[]): string {
     {
       cwd,
       encoding: 'utf8',
-      env: {
+      env: isolatedGitEnv({
         ...process.env,
         GIT_CONFIG_NOSYSTEM: '1',
         GIT_CONFIG_GLOBAL: '/dev/null',
         GIT_TEMPLATE_DIR: '',
-      },
+      }),
     },
   );
   assert.equal(
@@ -183,13 +192,13 @@ export function createMergeFixture(mutate: {
     directory,
     branchName: 'line0',
     baseFiles,
-    mutateBranch: mutate.line0,
+    ...(mutate.line0 === undefined ? {} : { mutateBranch: mutate.line0 }),
   });
   const line1 = commitBranchTip({
     directory,
     branchName: 'line1',
     baseFiles,
-    mutateBranch: mutate.line1,
+    ...(mutate.line1 === undefined ? {} : { mutateBranch: mutate.line1 }),
     startAt: base,
   });
 
