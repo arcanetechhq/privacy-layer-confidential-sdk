@@ -10,8 +10,9 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "vitest run",
+    "test": "vitest run && node test/release-dry-run.mjs",
     "test:watch": "vitest",
+    "test:release-dry-run": "node test/release-dry-run.mjs",
     "typecheck:deps": "npm run build --workspace @arcanetech/privacy-sdk-core && npm run build --workspace @arcanetech/privacy-sdk-state-memory && npm run build --workspace @arcanetech/privacy-sdk-state-redux && npm run bindings:build --workspace @arcanetech/privacy-sdk-stellar",
     "typecheck": "npm run typecheck:deps && npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
