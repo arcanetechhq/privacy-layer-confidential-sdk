@@ -35,7 +35,7 @@ describe('release-dry-run line 0 plan', { timeout: 30_000 }, () => {
     });
     assert.equal(result.status, 0, result.stderr || result.stdout);
     assert.match(result.stdout, /\bversion:\s*0\.6\.2\b/);
-    assert.match(result.stdout, /\bv0\b/);
+    assert.match(result.stdout, /dist-tags: sdk-v0 latest/);
     assert.match(result.stdout, /\blatest\b/);
     assert.match(result.stdout, LINE_0_MANIFEST_PATTERN);
     assert.match(result.stdout, LINE_0_SELECTED_PATTERN);
@@ -56,7 +56,7 @@ describe('release-dry-run line 0 plan', { timeout: 30_000 }, () => {
     });
     assert.equal(result.status, 0, result.stderr || result.stdout);
     assert.match(result.stdout, /\bversion:\s*0\.7\.0\b/);
-    assert.match(result.stdout, /\bv0\b/);
+    assert.match(result.stdout, /dist-tags: sdk-v0 latest/);
     assert.match(result.stdout, /\blatest\b/);
     assert.match(result.stdout, LINE_0_MANIFEST_PATTERN);
     assert.match(result.stdout, /^breaking-commit: allow$/m);
@@ -137,7 +137,7 @@ describe('release-dry-run line 0 plan', { timeout: 30_000 }, () => {
       });
       assert.equal(result.status, 0, result.stderr || result.stdout);
       assert.match(result.stdout, /\bversion:\s*0\.6\.2\b/);
-      assert.match(result.stdout, /\bv0\b/);
+      assert.match(result.stdout, /dist-tags: sdk-v0 latest/);
       assert.match(result.stdout, LINE_0_SELECTED_PATTERN);
       assert.match(result.stdout, /^mode: publish$/m);
       assert.match(result.stdout, /skipped:.*npm publish/i);
@@ -168,7 +168,7 @@ describe('release-dry-run line 0 plan', { timeout: 30_000 }, () => {
     });
     assert.equal(result.status, 0, result.stderr || result.stdout);
     assert.match(result.stdout, /\bversion:\s*0\.6\.2\b/);
-    assert.match(result.stdout, /\bv0\b/);
+    assert.match(result.stdout, /dist-tags: sdk-v0$/m);
     assert.doesNotMatch(result.stdout, /\blatest\b/);
     assert.match(result.stdout, LINE_0_MANIFEST_PATTERN);
     assertPackedDryRun(result.stdout);

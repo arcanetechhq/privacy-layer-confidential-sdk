@@ -55,9 +55,16 @@ publish_workspace() {
   fi
 
   local -a tag_args=()
+  local publish_tag=""
   if [[ "$name" == "$STELLAR_PKG" && -n "$DIST_TAGS" ]]; then
     read -r -a tags <<< "$DIST_TAGS"
-    tag_args=(--tag "${tags[0]}")
+    publish_tag="${tags[0]}"
+    for tag in "${tags[@]}"; do
+      if [[ "$tag" == "latest" ]]; then
+        publish_tag="latest"
+      fi
+    done
+    tag_args=(--tag "$publish_tag")
   fi
 
   set +e
@@ -76,8 +83,24 @@ publish_workspace() {
 
   if [[ "$name" == "$STELLAR_PKG" && -n "$DIST_TAGS" ]]; then
     read -r -a tags <<< "$DIST_TAGS"
-    for tag in "${tags[@]:1}"; do
-      npm dist-tag add "${name}@${version}" "$tag"
+    for tag in "${tags[@]}"; do
+      if [[ "$tag" == "$publish_tag" ]]; then
+        continue
+      fi
+      if npm dist-tag add "${name}@${version}" "$tag"; then
+        continue
+      fi
+      local encoded code
+      encoded="${name//\//%2f}"
+      code="$(curl -sS -o /tmp/npm-dist-tag-body -w '%{http_code}' -X PUT \
+        -H "Authorization: Bearer ${NODE_AUTH_TOKEN:-}" \
+        -H "Content-Type: application/json" \
+        "https://registry.npmjs.org/-/package/${encoded}/dist-tags/${tag}" \
+        --data "\"${version}\"")"
+      if [[ "$code" != "200" && "$code" != "201" ]]; then
+        echo "warning: could not move dist-tag ${tag} (HTTP ${code}); publish tag ${publish_tag} is already set" >&2
+        cat /tmp/npm-dist-tag-body >&2 || true
+      fi
     done
   fi
 }
