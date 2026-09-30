@@ -93,6 +93,18 @@ describe('release-dry-run line 0 plan', { timeout: 30_000 }, () => {
     assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
   });
 
+  it('skips a non-release commit without selecting a version', () => {
+    const result = runReleaseDryRun({
+      releaseLine: '0',
+      commitMessage: 'chore: release',
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /^release: skip$/m);
+    assert.doesNotMatch(result.stdout, /\bversion:\s*\d+/);
+    assert.doesNotMatch(result.stdout, /\bnpm publish\b/);
+    assertNoLocalSideEffects(packageBefore, tagsBefore, tarballsBefore);
+  });
+
   it('after stable 1.x exists, prints dist-tag v0 and does not take latest', () => {
     const result = runReleaseDryRun({
       releaseLine: '0',

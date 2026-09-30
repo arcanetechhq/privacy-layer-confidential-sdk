@@ -162,6 +162,11 @@ def print_line1_selection():
     print(f"publish-selected: {stellar_pkg}")
     print(f"publish-skipped: {skipped_pkgs}")
 
+def skip_release(manifest: str, zk_range: str):
+    # Not a fix/feat (and not a manual promotion). Do not fail the publish job.
+    write_plan(None, None, manifest, "allow", zk_range, [], [])
+    sys.exit(0)
+
 if release_line == "0":
     if breaking:
         write_plan(
@@ -188,8 +193,7 @@ if release_line == "0":
     elif kind == "fix":
         patch += 1
     else:
-        print(f"unsupported commit type in message: {message!r}", file=sys.stderr)
-        sys.exit(1)
+        skip_release(line_0_manifest, line_0_zk_range)
 
     next_version = f"{major}.{minor}.{patch}"
     if stable_1x_published:
@@ -238,8 +242,7 @@ if not stable_1x_published:
     # 1.0.0-rc.N. This 0.x checkout is still 0.6.1, so the first RC is 1.0.0-rc.0.
     kind = commit_kind(message)
     if kind not in ("fix", "feat"):
-        print(f"unsupported commit type in message: {message!r}", file=sys.stderr)
-        sys.exit(1)
+        skip_release(line_1_manifest, line_1_zk_range)
     major, _, _ = parse_semver(version)
     if major >= 1 and version.startswith("1.0.0-rc."):
         rc_n = int(version.rsplit(".", 1)[-1]) + 1
@@ -277,8 +280,7 @@ if kind == "feat":
 elif kind == "fix":
     patch += 1
 else:
-    print(f"unsupported commit type in message: {message!r}", file=sys.stderr)
-    sys.exit(1)
+    skip_release(line_1_manifest, line_1_zk_range)
 
 next_version = f"{major}.{minor}.{patch}"
 write_plan(
@@ -298,6 +300,13 @@ print_line1_selection()
 print("breaking-commit: allow")
 PY
 
+plan_version="$(
+  PLAN_FILE="$PLAN_FILE" python3 -c 'import json, os; print(json.load(open(os.environ["PLAN_FILE"])).get("version") or "")'
+)"
+if [[ -z "$plan_version" ]]; then
+  echo "release: skip"
+  exit 0
+fi
 
 if [[ -z "$MERGE_FROM" && -z "$MERGE_INTO" ]]; then
   echo "protected-path: allow"

@@ -158,6 +158,11 @@ jobs:
           fi
           plan_out="$(scripts/release-dry-run.sh)"
           printf '%s\n' "$plan_out"
+          if printf '%s\n' "$plan_out" | grep -q '^release: skip$'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
           version="$(python3 -c 'import json; print(json.load(open("packages/stellar/package.json"))["version"])')"
           dist_tags="$(printf '%s\n' "$plan_out" | awk -F': ' '/^dist-tags:/{print $2; exit}')"
           selected="$(printf '%s\n' "$plan_out" | awk -F': ' '/^publish-selected:/{print $2; exit}')"
@@ -175,6 +180,7 @@ jobs:
           echo "publish_selected=${selected}" >> "$GITHUB_OUTPUT"
 
       - name: Commit selected Stellar package version
+        if: steps.release.outputs.skip != 'true'
         env:
           VERSION: ${{ steps.release.outputs.version }}
           BRANCH: ${{ github.ref_name }}
@@ -191,6 +197,7 @@ jobs:
           fi
 
       - name: Publish selected workspace packages
+        if: steps.release.outputs.skip != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           PUBLISH_PACKAGES: ${{ steps.release.outputs.publish_selected }}
