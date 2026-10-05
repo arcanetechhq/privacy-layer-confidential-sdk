@@ -7,12 +7,14 @@ Developer steps for a normal package publish are in the README. This file is for
 | Branch | Package major | npm dist-tag |
 | --- | --- | --- |
 | `main` | Current major | `latest` |
-| `release/v0` | 0 | `v0` |
-| `release/v1` | 1 | `v1` |
+| `release/v0` | 0 | `release-v0` |
+| `release/v1` | 1 | `release-v1` |
 
-`release/v0` is the maintenance line for the packages that were published from `development`. `@arcanetech/privacy-sdk-stellar` on that branch depends on `@arcanetech/stellar-privacy-pool-zk-sdk` at `>=0.11.0 <1.0.0`. `scripts/check-majors.mjs` rejects a range that includes `1.0.0` or above. New publishes from `release/v0` use the `v0` dist-tag only. They do not move `latest` or the old `sdk-v0` tag.
+`release/v0` is the maintenance line for the packages that were published from `development`. `@arcanetech/privacy-sdk-stellar` on that branch depends on `@arcanetech/stellar-privacy-pool-zk-sdk` at `>=0.11.0 <1.0.0`. `scripts/check-majors.mjs` rejects a range that includes `1.0.0` or above. New publishes from `release/v0` use the `release-v0` dist-tag only. They do not move `latest` or the old `sdk-v0` tag.
 
-`release/v1` is cut from `v1`. Every public package on that branch is `1.0.0`. `@arcanetech/privacy-sdk-stellar` on `main` and `release/v1` depends on `@arcanetech/stellar-privacy-pool-zk-sdk` at `>=1.0.0-rc.0 <2.0.0`. That range installs the published `1.0.0-rc.0`, which samples a high-entropy escrow nonce. `>=1.0.0 <2.0.0` does not match that release candidate, so it cannot be installed yet. Publishes from `release/v1` use the `v1` dist-tag only.
+`release/v1` is cut from `v1`. Every public package on that branch is `1.0.0`. `@arcanetech/privacy-sdk-stellar` on `main` and `release/v1` depends on `@arcanetech/stellar-privacy-pool-zk-sdk` at `>=1.0.0-rc.0 <2.0.0`. That range installs the published `1.0.0-rc.0`, which samples a high-entropy escrow nonce. `>=1.0.0 <2.0.0` does not match that release candidate, so it cannot be installed yet. Publishes from `release/v1` use the `release-v1` dist-tag only.
+
+npm 11 refuses a dist-tag that is a valid semver range, so `v0` and `v1` cannot be tags. The release lines use `release-v0` and `release-v1` instead. Neither tag moves `latest`.
 
 `main` is `development` plus the `v1` product commits (incoming-note assessment and the escrow-sweep fix), then a major bump of every public package to `1.0.0`. That `1.0.0` publish is the one that moves `latest`. A follow-up minor changeset on `main` opens the `1.1.0` line so later `latest` versions are not the same versions `release/v1` will publish as `1.0.x`.
 
@@ -37,7 +39,7 @@ The workflow needs `RELEASE_BOT_TOKEN` (a GitHub App token or PAT that can push 
 
 `1.0.0` is published once, from `main`, as `latest`. `release/v1` is at the same `1.0.0`. Its publish skips versions that are already on npm and does not move `latest`.
 
-After that publish, `main` contains a minor changeset for every public package. Merging the resulting "Version Packages" pull request publishes `1.1.0` as `latest`. Further `1.0.x` releases belong to `release/v1` and use dist-tag `v1`.
+After that publish, `main` contains a minor changeset for every public package. Merging the resulting "Version Packages" pull request publishes `1.1.0` as `latest`. Further `1.0.x` releases belong to `release/v1` and use dist-tag `release-v1`.
 
 If `RELEASE_BOT_TOKEN` is missing, the release workflow fails before it publishes. Add the token, then re-run the workflow on the `1.0.0` commit on `main` before merging the `1.1.0` version pull request. Otherwise `1.0.0` never becomes `latest`.
 

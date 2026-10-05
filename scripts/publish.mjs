@@ -5,7 +5,11 @@ import { isDirectRun, readCurrentBranch } from './git-branch.mjs';
 
 export function resolveDistributionTag(ref) {
   const expected = expectedMajorForRef(ref);
-  return expected === undefined ? 'latest' : `v${expected}`;
+  if (expected === undefined) {
+    return 'latest';
+  }
+  // npm 11 rejects a dist-tag that is a semver range. `v0` and `v1` are ranges.
+  return `release-v${expected}`;
 }
 
 export function publishEnvironment() {

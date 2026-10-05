@@ -102,8 +102,8 @@ Publish from a pull request into the branch that owns the line. You do not edit 
 
 | Branch | Dist-tag | What you can release |
 | --- | --- | --- |
-| `release/v0` | `v0` | Patch and minor fixes for major 0. The Stellar dependency on `@arcanetech/stellar-privacy-pool-zk-sdk` must stay inside major 0 (`>=0.11.0 <1.0.0`). |
-| `release/v1` | `v1` | Patch and minor fixes for major 1. A `major` changeset is rejected. |
+| `release/v0` | `release-v0` | Patch and minor fixes for major 0. The Stellar dependency on `@arcanetech/stellar-privacy-pool-zk-sdk` must stay inside major 0 (`>=0.11.0 <1.0.0`). |
+| `release/v1` | `release-v1` | Patch and minor fixes for major 1. A `major` changeset is rejected. |
 | `main` | `latest` | The current major. A major bump applies to every public package. |
 
 1. Branch from `release/v0`, `release/v1`, or `main`.
