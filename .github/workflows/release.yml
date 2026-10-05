@@ -32,6 +32,8 @@ jobs:
 
       - run: npm run verify
 
+      - run: npm install -g npm@11
+
       - uses: changesets/action@v1
         with:
           version: npm exec -- changeset version
