@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0
+
+### Minor Changes
+
+- af42ba2: Open the 1.1.0 line on main so 1.0.x stays on release/v1.
+
+### Patch Changes
+
+- Updated dependencies [af42ba2]
+  - @arcanetech/privacy-sdk-core@1.1.0
+
 ## 1.0.0
 
 ### Major Changes
