@@ -17,6 +17,7 @@ English-language monorepo for the Arcane high-level privacy SDK.
 | Package                                                           | Description                                                                                   |
 | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | [`@arcanetech/privacy-sdk-core`](./packages/core/README.md)       | Network-agnostic intents, prepared operations, errors, progress events, and adapter contracts |
+| [`@arcanetech/privacy-sdk-data-layer`](./packages/data-layer/README.md) | Private-record HTTP client. Checks the schemas you pass before it returns records or a completion |
 | [`@arcanetech/privacy-sdk-relay`](./packages/relay/README.md)     | Chain-agnostic protocol relay runtime (admission, polling, retry, fallback) over caller-supplied ports |
 | [`@arcanetech/privacy-sdk-stellar`](./packages/stellar/README.md) | Stellar preset with browser and Node entrypoints                                              |
 
@@ -119,5 +120,6 @@ Maintainer steps for cutting a new `release/vN`, the `1.0.0` / `1.1.0` split, an
 ## Package READMEs
 
 - [Core package README](./packages/core/README.md)
+- [Data-layer package README](./packages/data-layer/README.md)
 - [Relay package README](./packages/relay/README.md)
 - [Stellar package README](./packages/stellar/README.md)

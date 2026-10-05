@@ -19,21 +19,25 @@ All public packages use the `@arcanetech` scope and are published on npm. Instal
 flowchart BT
   App[Your application]
   Stellar["@arcanetech/privacy-sdk-stellar"]
+  DataLayer["@arcanetech/privacy-sdk-data-layer"]
   Relay["@arcanetech/privacy-sdk-relay"]
   Core["@arcanetech/privacy-sdk-core"]
   Memory["@arcanetech/privacy-sdk-state-memory"]
   Redux["@arcanetech/privacy-sdk-state-redux"]
 
   App --> Stellar
+  App --> DataLayer
   App --> Relay
   App --> Memory
   App --> Redux
   Stellar --> Core
+  DataLayer --> Core
   Memory --> Core
   Redux --> Core
 ```
 
-- **Core** — intents, prepare/execute lifecycle, errors, progress events.
+- **Core** — intents, prepare/execute lifecycle, errors, progress events, and the private-data authorization envelope.
+- **Private data** — HTTP client for private records. You pass the schemas. `find` returns records only after your schema accepts the payload. Challenge methods stop before a request when you omit the completion schema.
 - **Relay** — Protocol Relay runtime: admission, polling, retry, and fallback over caller-supplied ports. It owns statuses, reason codes, and package JSON serialization, follows a caller-supplied submission path, and never inspects opaque package payloads or deposit amounts. Relaying is enabled only when the caller sets `relayConfig.origin`; otherwise the runtime Direct-submits and does not contact a relayer. Settlement polling is bounded. The package does not depend on Stellar or Soroban.
 - **State adapters** — persistence for SDK domain state.
 - **Network preset** — `@arcanetech/privacy-sdk-stellar`: client, contract bindings, and state schema extensions.
@@ -46,7 +50,8 @@ Internal transitive dependencies are not part of the public integration surface.
 
 | Import                                                                                         | Purpose                                                                                                                 |
 | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `@arcanetech/privacy-sdk-core`                                                                 | Intents, lifecycle helpers, error types, progress events                                                                |
+| `@arcanetech/privacy-sdk-core`                                                                 | Intents, lifecycle helpers, error types, progress events, authorization envelope                                        |
+| `@arcanetech/privacy-sdk-data-layer`                                                           | Private-record HTTP client. Checks caller-supplied schemas before returning                                             |
 | [`@arcanetech/privacy-sdk-relay`](https://www.npmjs.com/package/@arcanetech/privacy-sdk-relay) | Protocol relay runtime (ports, polling, retry, fallback) and the wire vocabulary (statuses, reason codes, package JSON) |
 | `@arcanetech/privacy-sdk-state-memory`                                                         | In-memory state adapter for prototypes and tests                                                                        |
 | `@arcanetech/privacy-sdk-state-redux`                                                          | Redux Toolkit adapter for React apps                                                                                    |
@@ -116,6 +121,7 @@ flowchart TD
 
   Learn --> CoreOnly["core only (read API)"]
   StellarApp --> StellarStack["core + stellar + state-memory"]
+  StellarApp --> PrivateRecords["+ privacy-sdk-data-layer"]
   StellarApp --> PrivateSender[Private sender / escrow]
   PrivateSender --> Relay["+ privacy-sdk-relay"]
   ReactProd --> ReduxStack["+ state-redux (optional)"]

@@ -1,7 +1,7 @@
 {
-  "name": "@arcanetech/privacy-sdk-state-redux",
+  "name": "@arcanetech/privacy-sdk-data-layer",
   "version": "1.0.0",
-  "description": "Redux Toolkit state bridge adapter for the Arcane privacy SDK",
+  "description": "Private-data HTTP client that checks caller-supplied schemas before returning records or completions",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -20,21 +20,18 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json"
   },
-  "dependencies": {
-    "@arcanetech/privacy-sdk-core": "1.0.1",
-    "@reduxjs/toolkit": "^2.6.1"
-  },
-  "peerDependencies": {
-    "@reduxjs/toolkit": "^2.0.0"
-  },
   "sideEffects": false,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/arcanetechhq/privacy-layer-confidential-sdk.git",
-    "directory": "packages/state/redux"
+    "directory": "packages/data-layer"
   },
   "license": "UNLICENSED",
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@arcanetech/privacy-sdk-core": "1.0.1",
+    "zod": "^3.24.2"
   }
 }

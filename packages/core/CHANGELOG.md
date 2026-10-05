@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+### Patch Changes
+
+- Add the private-data authorization envelope and `authorizePrivateData`.
+
 ## 1.0.0
 
 ### Major Changes

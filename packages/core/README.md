@@ -12,6 +12,7 @@ This package defines:
 - progress events
 - wallet, storage, network, and policy adapter contracts
 - a reusable `AdapterPrivacyClient` orchestrator
+- a wide authorization envelope (`protocol`, `message`, `fields`) and `authorizePrivateData`, which rejects a payload that misses that shape before the authorizer runs
 
 The core package intentionally contains no Stellar, Soroban, ZK, KYT, or low-level SDK dependencies.
 

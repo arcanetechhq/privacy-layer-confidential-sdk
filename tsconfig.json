@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "./packages/core/tsconfig.test.json" },
+    { "path": "./packages/data-layer/tsconfig.test.json" },
     { "path": "./packages/relay/tsconfig.test.json" },
     { "path": "./packages/stellar/tsconfig.test.json" }
   ]
