@@ -97,9 +97,24 @@ Site configuration is in [`docs/docs.json`](./docs/docs.json). The repository ro
 
 ## Release Process
 
-- Conventional Commits drive version, dist-tag, and publish selection through `scripts/release-dry-run.sh`.
-- Pull requests against `development` or `v1` rehearse that script in dry-run mode (no registry write).
-- Pushes to `development` or `v1` (and manual v1 promotion) publish through the same script via `.github/workflows/release.yml`.
+Publish from a pull request into the branch that owns the line. You do not edit `package.json` versions and you do not run `npm publish`.
+
+| Branch | Dist-tag | What you can release |
+| --- | --- | --- |
+| `release/v0` | `v0` | Patch and minor fixes for major 0. The Stellar dependency on `@arcanetech/stellar-privacy-pool-zk-sdk` must stay inside major 0 (`>=0.11.0 <1.0.0`). |
+| `release/v1` | `v1` | Patch and minor fixes for major 1. A `major` changeset is rejected. |
+| `main` | `latest` | The current major. A major bump applies to every public package. |
+
+1. Branch from `release/v0`, `release/v1`, or `main`.
+2. Change the code, then run `npm exec changeset`. Choose `patch` or `minor`. On `release/v0` and `release/v1`, do not choose `major`.
+3. Open a pull request into that same branch. CI checks package majors, that a changeset exists for package changes, and `npm run verify`.
+4. After the pull request merges, review and merge the generated "Version Packages" pull request. That merge publishes to npm. The dist-tag comes from the branch name.
+
+One publish does not ship every workspace package and does not give them the same version. Changesets bumps only the packages named in the changeset. A package that depends on a bumped package gets a patch bump, and its dependency pin is updated. Other packages stay on their current versions and are skipped, because those versions are already on npm. Minor and patch may differ across packages in that commit. Every public package on one branch still shares the same major.
+
+Do not reuse a changeset file on another branch. A backport is a separate pull request with its own changeset.
+
+Maintainer steps for cutting a new `release/vN`, the `1.0.0` / `1.1.0` split, and GitHub rulesets are in [RELEASING.md](./RELEASING.md).
 
 ## Package READMEs
 

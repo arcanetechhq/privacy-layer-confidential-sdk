@@ -39,7 +39,7 @@
 | Static analysis | Fallow dead-code and duplication scans via `fallow:dead-code` / `fallow:dupes` |
 | Git hooks       | Lefthook pre-commit runs lint and Fallow checks                                |
 | Docs            | English README files plus Mintlify docs in `docs/`                             |
-| Releases        | `scripts/release-dry-run.sh` owns version/dist-tag/verdicts; `.github/workflows/release.yml` on `development`/`v1` |
+| Releases        | Changesets on `main` (`latest`), `release/v0` (`v0`), and `release/v1` (`v1`). Developer steps are in `README.md`; branch cuts are in `RELEASING.md`. `.github/workflows/release.yml` publishes. |
 
 ## Package Boundaries
 

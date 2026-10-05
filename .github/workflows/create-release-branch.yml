@@ -1,0 +1,52 @@
+name: Create release branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      major:
+        description: Major version to freeze onto release/vN
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_BOT_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Confirm every public package is that major
+        env:
+          GITHUB_REF_NAME: release/v${{ inputs.major }}
+        run: node scripts/check-majors.mjs
+
+      - name: Push release/vN with baseBranch set to itself
+        env:
+          MAJOR: ${{ inputs.major }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$MAJOR" =~ ^([1-9][0-9]*|0)$ ]]; then
+            echo "major must be a non-negative integer without leading zeros" >&2
+            exit 1
+          fi
+          branch="release/v${MAJOR}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          node scripts/set-changesets-base-branch.mjs "$branch"
+          git add .changeset/config.json
+          git commit -m "chore: set changesets baseBranch to ${branch}"
+          git push origin "HEAD:refs/heads/${branch}"

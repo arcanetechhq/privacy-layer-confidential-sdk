@@ -18,11 +18,15 @@
     "lint:fix": "eslint . --fix",
     "fallow:dead-code": "fallow dead-code -q",
     "fallow:dupes": "fallow dupes -q --ignore-imports",
+    "check:majors": "node scripts/check-majors.mjs",
+    "changeset:major": "node scripts/major-changeset.mjs",
     "verify": "npm run lint && npm run typecheck && npm run build && npm run test && npm run fallow:dead-code && npm run fallow:dupes",
     "prepare": "lefthook install"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "@eslint/js": "^9.39.4",
+    "@manypkg/get-packages": "^3.1.0",
     "@types/node": "^22.10.7",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.0.1",
@@ -35,6 +39,7 @@
     "globals": "^16.0.0",
     "lefthook": "^1.11.14",
     "prettier": "^3.5.3",
+    "semver": "^7.8.5",
     "tsup": "^8.5.0",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.29.0",

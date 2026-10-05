@@ -1,0 +1,58 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - "release/v*"
+
+permissions:
+  contents: read
+
+jobs:
+  check-majors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: node scripts/check-majors.mjs
+
+  changeset-status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Fetch the pull request base branch
+        run: git fetch origin "${{ github.base_ref }}"
+
+      - run: npm exec -- changeset status --since=origin/${{ github.base_ref }}
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run verify
