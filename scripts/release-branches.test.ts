@@ -9,7 +9,7 @@ import {
   assertMajorChangesetAllowed,
   renderMajorChangeset,
 } from './major-changeset.mjs';
-import { resolveDistributionTag } from './publish.mjs';
+import { publishEnvironment, resolveDistributionTag } from './publish.mjs';
 import { withBaseBranch } from './set-changesets-base-branch.mjs';
 
 const core = { name: '@arcanetech/privacy-sdk-core', version: '0.3.1', private: false };
@@ -146,6 +146,27 @@ describe('dist tag', () => {
     expect(() => resolveDistributionTag('development')).toThrow(
       'Unsupported release branch: development',
     );
+  });
+
+  it('omits npm tokens so publish uses trusted publishing', () => {
+    const previousAuth = process.env.NODE_AUTH_TOKEN;
+    const previousNpm = process.env.NPM_TOKEN;
+    process.env.NODE_AUTH_TOKEN = 'placeholder';
+    process.env.NPM_TOKEN = 'placeholder';
+    const env = publishEnvironment();
+    if (previousAuth === undefined) {
+      delete process.env.NODE_AUTH_TOKEN;
+    } else {
+      process.env.NODE_AUTH_TOKEN = previousAuth;
+    }
+    if (previousNpm === undefined) {
+      delete process.env.NPM_TOKEN;
+    } else {
+      process.env.NPM_TOKEN = previousNpm;
+    }
+    expect(env.NODE_AUTH_TOKEN).toBeUndefined();
+    expect(env.NPM_TOKEN).toBeUndefined();
+    expect(env.PATH).toBe(process.env.PATH);
   });
 });
 
