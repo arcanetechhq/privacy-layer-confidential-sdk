@@ -65,6 +65,9 @@ export function evaluateRequiredSubmissionMethod(
   prepared: StellarPreparedOperation,
   zkConfigNonce: bigint = DEFAULT_ZK_CONFIG_NONCE,
 ): RequiredSubmissionMethodResult {
+  if (prepared.kind === 'publicWithdraw') {
+    return { method: SUBMISSION_METHOD.direct };
+  }
   const publicDepositAmount = publicDepositAmountFromPrepared(prepared, zkConfigNonce);
   if (isEscrowPreparedOperation(prepared)) {
     if (

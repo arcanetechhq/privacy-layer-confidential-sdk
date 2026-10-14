@@ -17,6 +17,11 @@ export type {
   StellarPrivacyClientConfig,
 } from './client/create.js';
 export type { StellarPrivacyClient } from './client/client.js';
+export { PublicWithdrawNoteError } from './transact/public-withdraw/note-error.js';
+export type {
+  StellarPublicWithdrawNote,
+  StellarPublicWithdrawNotePage,
+} from './transact/public-withdraw/list-notes.js';
 export type { StellarPrivacyStateHydration } from './client/hydrate-state.js';
 export { stellarStateDefinitions } from './state/definitions/index.js';
 export {
@@ -46,6 +51,7 @@ export type {
   StellarPrivateAssetRow,
   StellarPrivateRecord,
   StellarPrivateRecordStatus,
+  StellarPublicWithdrawIntent,
   StellarPublicBalance,
   StellarRegistryLookup,
   StellarStateAdapter,

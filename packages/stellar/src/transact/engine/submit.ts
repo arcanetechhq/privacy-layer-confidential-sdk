@@ -6,6 +6,7 @@ import { finalizeSpendOperationAtExecute } from './execute.js';
 import { submitSorobanConfidentialTransfer } from '../submit/soroban-confidential-transfer.js';
 import { requestKytPassageForPoolInteraction } from '../kyt/passage-inspect.js';
 import { submitPoolTransact } from '../submit/pool-transact.js';
+import { submitPublicOutput } from '../submit/public-output.js';
 import { transactNonceFromArtifacts } from '../environment/zk-config-nonce.js';
 
 function optionalInspectCiphertext(
@@ -98,11 +99,36 @@ async function submitPreparedPoolTransact(
   });
 }
 
+async function submitPreparedPublicOutput(
+  prepared: StellarPreparedOperation,
+  environment: StellarTransactEnvironment,
+): Promise<string> {
+  const output = prepared.publicOutput;
+  if (!output) {
+    throw new Error('Prepared public withdraw is missing its note opening.');
+  }
+  const poolClient = readPoolClientFactory(environment)({
+    contractId: environment.network.poolContract,
+    walletPublicKey: output.to,
+    networkPassphrase: environment.network.networkPassphrase,
+    sorobanRpcUrl: environment.network.rpcUrl,
+  });
+  return submitPublicOutput({
+    contractClient: poolClient,
+    note: output.note,
+    leafIndex: output.leafIndex,
+    to: output.to,
+  });
+}
+
 export async function submitPreparedOperation(
   prepared: StellarPreparedOperation,
   environment: StellarTransactEnvironment,
   poolService: PrivacyPoolService,
 ): Promise<string> {
+  if (prepared.kind === 'publicWithdraw') {
+    return submitPreparedPublicOutput(prepared, environment);
+  }
   const finalized =
     prepared.kind === 'deposit'
       ? prepared

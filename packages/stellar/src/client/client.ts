@@ -1,7 +1,12 @@
 import type {
   ResolvedStellarPrivacyClientConfig,
+  StellarPublicWithdrawIntent,
   StellarTransferIntent,
 } from '../types.js';
+import {
+  listPublicWithdrawNotes,
+  type StellarPublicWithdrawNotePage,
+} from '../transact/public-withdraw/list-notes.js';
 import {
   composeStellarPrivacyClient,
   type ComposedStellarPrivacyClient,
@@ -25,6 +30,14 @@ export type StellarPrivacyClient = {
     intent: StellarTransferIntent,
   ) => ReturnType<StellarPrivacyClientOperations['transfer']>;
   withdraw: StellarPrivacyClientOperations['withdraw'];
+  publicWithdraw: (
+    intent: StellarPublicWithdrawIntent,
+  ) => ReturnType<StellarPrivacyClientOperations['publicWithdraw']>;
+  listPublicWithdrawNotes: (input: {
+    page: number;
+    pageSize: number;
+    asset?: string;
+  }) => Promise<StellarPublicWithdrawNotePage>;
   syncPoolMerkleState: StellarPrivacyClientNetwork['syncPoolMerkleState'];
   syncPoolMerkleStates: StellarPrivacyClientNetwork['syncPoolMerkleStates'];
   readPoolLeafEphemeralHex: StellarPrivacyClientNetwork['readPoolLeafEphemeralHex'];
@@ -52,6 +65,14 @@ export function createStellarPrivacyClientInstance(
     deposit: (intent) => composed.operations.deposit(intent),
     transfer: (intent) => composed.operations.transfer(intent),
     withdraw: (intent) => composed.operations.withdraw(intent),
+    publicWithdraw: (intent) => composed.operations.publicWithdraw(intent),
+    listPublicWithdrawNotes: async (input) =>
+      listPublicWithdrawNotes({
+        records: await composed.state.getPrivateRecords(),
+        page: input.page,
+        pageSize: input.pageSize,
+        ...(input.asset === undefined ? {} : { asset: input.asset }),
+      }),
     syncPoolMerkleState: (input) => composed.network.syncPoolMerkleState(input),
     syncPoolMerkleStates: (input) => composed.network.syncPoolMerkleStates(input),
     readPoolLeafEphemeralHex: (input) =>

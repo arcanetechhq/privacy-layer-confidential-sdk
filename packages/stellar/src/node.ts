@@ -22,6 +22,7 @@ export type {
   StellarNodeAssets,
   StellarNodePrivacyClientConfig,
 } from './types.node.js';
+export { PublicWithdrawNoteError } from './transact/public-withdraw/note-error.js';
 
 export async function createStellarPrivacyClientFromNodeConfig(
   config: StellarNodePrivacyClientConfig,

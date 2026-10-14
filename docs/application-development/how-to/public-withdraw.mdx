@@ -1,0 +1,125 @@
+---
+title: Public withdraw
+description: List a withdrawable note and pay its full value to the connected wallet
+---
+
+import { OperationDisclosures } from '../../snippets/operation-disclosures.jsx';
+
+Public withdraw spends one private pool note and pays its full value to a public wallet. The sender, recipient, asset, and amount are public. The connected wallet must be the payout address and must sign the transaction.
+
+## Disclosure policy
+
+<OperationDisclosures operation="public-withdraw" />
+
+Every disclosure field is `public`. `execute()` submits the transaction directly.
+
+## Example
+
+<Warning>
+  The addresses, contracts, and seed values below are placeholders, not runnable testnet data. Use the matching pool configuration and audit public key from [Set up the SDK](/integration/getting-access). Create the client using [Frontend integration](/application-development/setup) or [Backend integration](/integration/backend), and load real account state as described in [State methods](/integration/data-sources).
+</Warning>
+
+### Seed state
+
+Seed one unspent note whose value matches the amount you will withdraw. `id` is the note commitment.
+
+```tsx
+const OWNER = 'GDSENDER7EXAMPLEPUBLICKEYAAAAAAAAAAAAAAAAAAAA';
+const PRIVATE_ADDRESS = 'stpl1sender7exampleprivateaddress0000000000';
+
+await client.upsertPrivateRecords([
+  {
+    id: 'commitment-hex',
+    owner: OWNER,
+    privateAddress: PRIVATE_ADDRESS,
+    asset: 'usdc',
+    amount: 100n,
+    consumed: false,
+    coinNote: {
+      value: '100',
+      secret: '3',
+      nullifier: '4',
+      commitment: 'commitment-hex',
+      asset_hi: '5',
+      asset_lo: '6',
+    },
+  },
+]);
+```
+
+Sync pool state before you withdraw so the client can find the note's leaf index.
+
+```tsx
+const POOL = 'CBVQTSTSIJ4UZMN5FQBFHPUIYSW3ATGSP57BZDJNKTOBNQODQTRGE4K5';
+
+await client.syncPoolMerkleState({
+  poolContractId: POOL,
+  walletPublicKey: OWNER,
+});
+```
+
+### List notes and withdraw
+
+`listPublicWithdrawNotes` reads local state. It returns unspent notes that can be withdrawn. `page` starts at 1.
+
+```tsx
+const page = await client.listPublicWithdrawNotes({
+  page: 1,
+  pageSize: 20,
+  asset: 'usdc',
+});
+const note = page.notes[0];
+if (!note) {
+  throw new Error('No note is available for public withdraw.');
+}
+
+const operation = await client.publicWithdraw({
+  from: note.privateAddress,
+  to: 'GDSENDER7EXAMPLEPUBLICKEYAAAAAAAAAAAAAAAAAAAA',
+  asset: note.asset,
+  amount: note.amount,
+  noteId: note.id,
+  disclosure: {
+    senderAddress: 'public',
+    recipientAddress: 'public',
+    assetAddress: 'public',
+    amount: 'public',
+  },
+});
+
+if (operation.status !== 'prepared') {
+  throw new Error(operation.errors[0]?.message);
+}
+
+await operation.execute({});
+```
+
+`amount` must equal the note value. `to` must be the connected wallet. That address signs the payout.
+
+Omit `noteId` only when exactly one unspent note has that asset and amount. Catch `PublicWithdrawNoteError` when no unspent note matches.
+
+```tsx
+import { PublicWithdrawNoteError } from '@arcanetech/privacy-sdk-stellar';
+
+try {
+  await client.publicWithdraw({
+    from: note.privateAddress,
+    to: 'GDSENDER7EXAMPLEPUBLICKEYAAAAAAAAAAAAAAAAAAAA',
+    asset: note.asset,
+    amount: note.amount,
+    disclosure: {
+      senderAddress: 'public',
+      recipientAddress: 'public',
+      assetAddress: 'public',
+      amount: 'public',
+    },
+  });
+} catch (error) {
+  if (error instanceof PublicWithdrawNoteError) {
+    throw new Error('No unspent note matches this asset and amount.');
+  }
+  throw error;
+}
+```
+
+A blocked payout address fails the transaction. The note stays unspent. Call `listPublicWithdrawNotes` again to confirm it is still listed.

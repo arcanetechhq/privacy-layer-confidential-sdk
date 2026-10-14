@@ -19,6 +19,12 @@ export const OperationDisclosures = ({ operation }) => {
       asset: 'public',
       amount: 'public',
     },
+    'public-withdraw': {
+      sender: 'public',
+      recipient: 'public',
+      asset: 'public',
+      amount: 'public',
+    },
     'transfer-registered': {
       sender: 'both',
       recipient: 'private',

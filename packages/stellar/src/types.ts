@@ -2,11 +2,13 @@ import type { OperationKind } from '@arcanetech/privacy-sdk-core';
 import type { StateBridgeAdapter } from '@arcanetech/privacy-sdk-core/state';
 import type {
   DepositIntent,
+  PublicWithdrawIntent,
   TransferIntent,
   WithdrawIntent,
 } from '@arcanetech/privacy-sdk-core';
 import type { StellarPrivateRecord } from './state/domain/types.js';
 import type { KytApplicationIdHints } from './transact/pool/proof-types.js';
+import type { StellarPublicOutputSubmission } from './transact/public-withdraw/types.js';
 import type { StellarTransferFromAddress } from './transact/transfer-source/types.js';
 
 export type StellarAddress = string;
@@ -20,6 +22,12 @@ export type StellarTransferIntent = TransferIntent<
   bigint,
   StellarAddress
 >;
+
+export type StellarPublicWithdrawIntent = PublicWithdrawIntent<
+  StellarAddress,
+  StellarAssetId,
+  bigint
+> & { noteId?: string };
 
 export type {
   StellarAsset,
@@ -45,11 +53,13 @@ export interface StellarPreparedOperation {
   intent:
     | DepositIntent<StellarAddress, StellarAssetId, bigint>
     | StellarTransferIntent
-    | WithdrawIntent<StellarAddress, StellarAssetId, bigint>;
+    | WithdrawIntent<StellarAddress, StellarAssetId, bigint>
+    | StellarPublicWithdrawIntent;
   consumedRecords: StellarPrivateRecord[];
   outputRecords: StellarPrivateRecord[];
   submissionPayload: StellarSubmissionPayload;
   transactArtifacts?: StellarTransactArtifacts;
+  publicOutput?: StellarPublicOutputSubmission;
 }
 
 export interface StellarSubmissionPayload {
@@ -129,7 +139,8 @@ export interface StellarPolicyAdapter {
     intent:
       | DepositIntent<StellarAddress, StellarAssetId, bigint>
       | StellarTransferIntent
-      | WithdrawIntent<StellarAddress, StellarAssetId, bigint>,
+      | WithdrawIntent<StellarAddress, StellarAssetId, bigint>
+      | StellarPublicWithdrawIntent,
   ): Promise<void>;
 }
 

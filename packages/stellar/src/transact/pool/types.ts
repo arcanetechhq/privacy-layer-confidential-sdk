@@ -13,6 +13,21 @@ export type PoolTransactClient = {
     leaf_index: number;
   }) => Promise<{ result: { x: Buffer; y: Buffer } }>;
   is_nulifier_hash_consumed: (input: { hash: Buffer }) => Promise<{ result: boolean }>;
+  public_output: (parameters: {
+    note: {
+      value: Buffer;
+      secret: Buffer;
+      nullifier: Buffer;
+      owner_pub_x: Buffer;
+      owner_pub_y: Buffer;
+      owner_mode: Buffer;
+      asset_hi: Buffer;
+      asset_lo: Buffer;
+      application_id: Buffer;
+    };
+    leaf_index: number;
+    to: string;
+  }) => Promise<PoolTransactResult>;
   transact: (parameters: {
     from: string;
     nonce: bigint;

@@ -1,5 +1,10 @@
 import type { PrivacyClientAdapters } from './adapters.js';
-import type { DepositIntent, TransferIntent, WithdrawIntent } from './intents.js';
+import type {
+  DepositIntent,
+  PublicWithdrawIntent,
+  TransferIntent,
+  WithdrawIntent,
+} from './intents.js';
 import { preparePrivacyOperation } from './prepare-privacy-operation.js';
 import type { OperationResult } from './operations.js';
 import { PrivacyClient } from './privacy-client.js';
@@ -49,5 +54,13 @@ export class AdapterPrivacyClient<
     OperationResult<'withdraw', TAddress, TAsset, TAmount, TPrepared, TReceipt>
   > {
     return preparePrivacyOperation('withdraw', intent, this.adapters);
+  }
+
+  publicWithdraw(
+    intent: PublicWithdrawIntent<TAddress, TAsset, TAmount>,
+  ): Promise<
+    OperationResult<'publicWithdraw', TAddress, TAsset, TAmount, TPrepared, TReceipt>
+  > {
+    return preparePrivacyOperation('publicWithdraw', intent, this.adapters);
   }
 }

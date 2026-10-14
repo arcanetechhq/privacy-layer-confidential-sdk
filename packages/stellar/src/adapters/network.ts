@@ -8,6 +8,7 @@ import type {
   StellarAddress,
   StellarAssetId,
   StellarOperationReceipt,
+  StellarPoolMerkleState,
   StellarPreparedOperation,
   StellarPrivateRecord,
   StellarStorageAdapter,
@@ -21,6 +22,7 @@ import {
   selectPrivateRecords,
   sumRecordAmounts,
 } from './record-selection.js';
+import { preparePublicWithdraw } from './public-withdraw-prepare.js';
 import { prepareTransferOperation } from './transfer-prepare.js';
 
 type StellarIntent =
@@ -33,6 +35,9 @@ export function createStellarNetworkAdapter(deps: {
   wallet: StellarWalletAdapter;
   engine: StellarTransactEngine;
   poolContract: string;
+  getPoolMerkleState: (
+    poolContract: string,
+  ) => Promise<StellarPoolMerkleState | undefined>;
   checkNullifierSpent?: (input: {
     nullifier: string;
     walletPublicKey: string;
@@ -50,6 +55,7 @@ export function createStellarNetworkAdapter(deps: {
     prepareTransfer: async (intent) => prepareTransferOperation(intent, deps),
     prepareWithdraw: async (intent) =>
       prepareOperation({ kind: 'withdraw', intent, ...deps }),
+    preparePublicWithdraw: async (intent) => preparePublicWithdraw(intent, deps),
     submit: async (prepared, options) => {
       const submissionInput = {
         prepared,
