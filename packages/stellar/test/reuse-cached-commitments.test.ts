@@ -29,6 +29,20 @@ describe('reuseCachedCommitments', () => {
     ).toEqual(['1', '2']);
   });
 
+  it('drops a complete cache that has no recorded root', () => {
+    expect(
+      reuseCachedCommitments({
+        onChainCount: 2,
+        merkleRootHex: ROOT_A,
+        cachedState: {
+          commitments: ['1', '2'],
+          updatedAt: 1,
+          merkleRootHex: '',
+        },
+      }),
+    ).toEqual([]);
+  });
+
   it('drops a complete cache when the on-chain root changed', () => {
     expect(
       reuseCachedCommitments({
