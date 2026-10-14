@@ -1,7 +1,10 @@
 import type { PrivacyClientAdapters } from './adapters.js';
 import { missingDependencyError, type PrivacySdkError } from './errors.js';
-import type { OperationKind } from './intents.js';
-import type { OperationIntent } from './intents.js';
+import type {
+  OperationIntent,
+  OperationKind,
+  PublicWithdrawIntent,
+} from './intents.js';
 
 export function collectMissingDependencies<
   TAddress,
@@ -115,6 +118,11 @@ export async function validatePolicy<
   if (kind === 'transfer') {
     return policy.validateTransfer(intent);
   }
+  if (kind === 'publicWithdraw') {
+    return policy.validatePublicWithdraw(
+      intent as PublicWithdrawIntent<TAddress, TAsset, TAmount>,
+    );
+  }
   return policy.validateWithdraw(intent);
 }
 
@@ -146,6 +154,11 @@ export async function prepareWithNetwork<
   }
   if (kind === 'transfer') {
     return network.prepareTransfer(intent);
+  }
+  if (kind === 'publicWithdraw') {
+    return network.preparePublicWithdraw(
+      intent as PublicWithdrawIntent<TAddress, TAsset, TAmount>,
+    );
   }
   return network.prepareWithdraw(intent);
 }

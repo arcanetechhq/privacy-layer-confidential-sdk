@@ -28,6 +28,7 @@ describe('adapter contracts', () => {
       prepareDeposit: async () => ({ prepared: true }),
       prepareTransfer: async () => ({ prepared: true }),
       prepareWithdraw: async () => ({ prepared: true }),
+      preparePublicWithdraw: async () => ({ prepared: true }),
       submit: async () => ({ receipt: true }),
     };
 
@@ -35,6 +36,7 @@ describe('adapter contracts', () => {
       validateDeposit: async () => [],
       validateTransfer: async () => [],
       validateWithdraw: async () => [],
+      validatePublicWithdraw: async () => [],
     };
 
     const options: ExecuteOptions = {

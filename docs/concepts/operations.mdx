@@ -1,6 +1,6 @@
 ---
 title: Operations
-description: Deposit, withdraw, and transfer — inputs, effects, and typical disclosure
+description: Deposit, withdraw, public withdraw, and transfer — inputs, effects, and typical disclosure
 ---
 
 import { OperationDisclosures } from '../snippets/operation-disclosures.jsx';
@@ -60,6 +60,20 @@ Spend a **private pool note** and pay out to a **public wallet**.
 
 Private sender on this route requires Protocol Relay. Direct `execute()` is for public-sender / positive public deposit.
 
+## Public withdraw
+
+Spend one **private pool note** and pay its full value to the **connected public wallet**. Sender, recipient, asset, and amount are public.
+
+1. **List** — `listPublicWithdrawNotes` returns unspent notes from local state.
+2. **Prepare** — match one note by asset and amount. Pass `noteId` when more than one note matches.
+3. **Execute** — the payout address signs and the pool pays the whole note. No change note is created.
+
+**Disclosure:**
+
+<OperationDisclosures operation="public-withdraw" />
+
+See [Public withdraw](/application-development/how-to/public-withdraw).
+
 ## Transfer to registered recipient
 
 Spend a sender note and create output note(s) for a recipient who is **already in the registry cache**.
@@ -94,6 +108,7 @@ Requires `transactEnvironment` hooks. See [Transfer to unregistered recipient](/
 | --- | --- | --- | --- | --- |
 | Deposit | Public wallet | Private payment | Optional | Often yes |
 | Withdraw | Private payment | Public wallet | No | Often yes |
+| Public withdraw | Private payment | Connected public wallet | Note owner | No |
 | Transfer (registered) | Private payment | Private payment | Required cache | Often yes |
 | Transfer (unregistered) | Private payment | Public wallet | Unregistered lookup | Often yes |
 

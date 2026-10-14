@@ -1,4 +1,9 @@
-import type { DepositIntent, TransferIntent, WithdrawIntent } from './intents.js';
+import type {
+  DepositIntent,
+  PublicWithdrawIntent,
+  TransferIntent,
+  WithdrawIntent,
+} from './intents.js';
 import type { ExecuteOptions } from './events.js';
 import type { PrivacySdkError } from './errors.js';
 
@@ -24,6 +29,9 @@ export interface NetworkAdapter<TAddress, TAsset, TAmount, TPrepared, TReceipt> 
     input: TransferIntent<TAddress, TAsset, TAmount, TAddress>,
   ): Promise<TPrepared>;
   prepareWithdraw(input: WithdrawIntent<TAddress, TAsset, TAmount>): Promise<TPrepared>;
+  preparePublicWithdraw(
+    input: PublicWithdrawIntent<TAddress, TAsset, TAmount>,
+  ): Promise<TPrepared>;
   submit(prepared: TPrepared, options?: ExecuteOptions): Promise<TReceipt>;
 }
 
@@ -36,6 +44,9 @@ export interface PolicyAdapter<TAddress, TAsset, TAmount> {
   ): Promise<PrivacySdkError[]>;
   validateWithdraw(
     intent: WithdrawIntent<TAddress, TAsset, TAmount>,
+  ): Promise<PrivacySdkError[]>;
+  validatePublicWithdraw(
+    intent: PublicWithdrawIntent<TAddress, TAsset, TAmount>,
   ): Promise<PrivacySdkError[]>;
 }
 

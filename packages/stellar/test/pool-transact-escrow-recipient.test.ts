@@ -40,6 +40,9 @@ async function captureTransactArgs() {
       result: { x: Buffer.alloc(32), y: Buffer.alloc(32) },
     }),
     is_nulifier_hash_consumed: async () => ({ result: false }),
+    public_output: async () => ({
+      signAndSend: async () => ({ sendTransactionResponse: { hash: 'hash' } }),
+    }),
     transact: async (parameters) => {
       captured = parameters;
       return {

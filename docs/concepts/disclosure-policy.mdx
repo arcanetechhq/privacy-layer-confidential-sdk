@@ -45,6 +45,7 @@ The Stellar **policy adapter** rejects invalid combinations with `unsupported_di
 | Registered private transfer | Recipient/asset/amount typically `private`. Sender may be public or private (private requires Protocol Relay). |
 | Escrow send to unregistered recipient | Same private disclosure as a registered transfer. Sender may be public or private (private requires Protocol Relay). Escrow send itself requires Protocol Relay. |
 | Withdraw to a public wallet | Recipient, asset, and amount must be `public`. Sender may be public or private (private requires Protocol Relay). |
+| Public withdraw | Sender, recipient, asset, and amount must all be `public`. The payout address signs directly. |
 
 Set a valid disclosure before you call prepare. Execute does not fix an invalid combination.
 
@@ -61,6 +62,12 @@ Sender, asset, and amount are public. Recipient stays private because the deposi
 <OperationDisclosures operation="withdraw" />
 
 Sender may be public or private. Payout to a public wallet requires recipient, asset, and amount to be public. Private sender requires Protocol Relay.
+
+### Public withdraw
+
+<OperationDisclosures operation="public-withdraw" />
+
+Sender, recipient, asset, and amount are public. The connected wallet is the payout address and signs the transaction.
 
 ### Transfer to registered recipient
 

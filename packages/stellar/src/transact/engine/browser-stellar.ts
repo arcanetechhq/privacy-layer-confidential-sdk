@@ -26,6 +26,9 @@ export function createBrowserStellarTransactEngine(input: {
       if (prepared.kind === 'transfer') {
         return prepareTransferOperation(prepared, environment);
       }
+      if (prepared.kind === 'publicWithdraw') {
+        return prepared;
+      }
       return prepareWithdrawOperation(prepared, environment);
     },
     submit: async (

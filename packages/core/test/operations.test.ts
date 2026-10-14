@@ -194,6 +194,7 @@ function createNetworkAdapter(
     prepareDeposit: async () => ({ id: 'deposit-plan' }),
     prepareTransfer: async () => ({ id: 'transfer-plan' }),
     prepareWithdraw: async () => ({ id: 'withdraw-plan' }),
+    preparePublicWithdraw: async () => ({ id: 'public-withdraw-plan' }),
     submit: async () => ({ ok: true }),
     ...overrides,
   };
@@ -204,5 +205,6 @@ function createPolicyAdapter(): PolicyAdapter<Address, Asset, bigint> {
     validateDeposit: async () => [],
     validateTransfer: async () => [],
     validateWithdraw: async () => [],
+    validatePublicWithdraw: async () => [],
   };
 }

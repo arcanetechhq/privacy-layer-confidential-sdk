@@ -37,6 +37,7 @@ function mockPoolClient(): PoolTransactClient {
     get_merkle_root: mocks.getMerkleRoot,
     get_leaf_ephemeral: unusedLeafEphemeral,
     is_nulifier_hash_consumed: unusedNullifierRead,
+    public_output: unusedTransact,
     transact: unusedTransact,
   };
 }

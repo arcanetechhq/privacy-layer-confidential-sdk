@@ -2,6 +2,7 @@ import type {
   DepositIntent,
   PolicyAdapter,
   PrivacySdkError,
+  PublicWithdrawIntent,
   WithdrawIntent,
 } from '@arcanetech/privacy-sdk-core';
 import { executionError } from '@arcanetech/privacy-sdk-core';
@@ -16,7 +17,8 @@ import type {
 type StellarIntent =
   | DepositIntent<StellarAddress, StellarAssetId, bigint>
   | StellarTransferIntent
-  | WithdrawIntent<StellarAddress, StellarAssetId, bigint>;
+  | WithdrawIntent<StellarAddress, StellarAssetId, bigint>
+  | PublicWithdrawIntent<StellarAddress, StellarAssetId, bigint>;
 
 export function createStellarPolicyAdapter(
   policy?: StellarPolicyAdapter,
@@ -34,11 +36,15 @@ export function createStellarPolicyAdapter(
       ...validateStellarDisclosure('withdraw', intent),
       ...(await runExternalPolicy('withdraw', intent, policy)),
     ],
+    validatePublicWithdraw: async (intent) => [
+      ...validateStellarDisclosure('publicWithdraw', intent),
+      ...(await runExternalPolicy('publicWithdraw', intent, policy)),
+    ],
   };
 }
 
 async function runExternalPolicy(
-  kind: 'deposit' | 'transfer' | 'withdraw',
+  kind: 'deposit' | 'transfer' | 'withdraw' | 'publicWithdraw',
   intent: StellarIntent,
   policy: StellarPolicyAdapter | undefined,
 ): Promise<PrivacySdkError[]> {

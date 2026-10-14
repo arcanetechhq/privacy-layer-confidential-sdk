@@ -18,6 +18,7 @@ import type {
   StellarOperationReceipt,
   StellarPreparedOperation,
   StellarPrivateRecord,
+  StellarPublicWithdrawIntent,
   StellarTransferIntent,
 } from '../types.js';
 import { createNullifierSpentChecker } from './nullifier-checker.js';
@@ -49,6 +50,7 @@ function createOperationsFacet(
       wallet: config.wallet,
       engine: config.transactEngine,
       poolContract: config.network.poolContract,
+      getPoolMerkleState: (poolContract) => state.getPoolMerkleState(poolContract),
       ...(checkNullifierSpent ? { checkNullifierSpent } : {}),
     }),
     policy: createStellarPolicyAdapter(config.policy),
@@ -57,6 +59,8 @@ function createOperationsFacet(
   return {
     deposit: client.deposit.bind(client),
     withdraw: client.withdraw.bind(client),
+    publicWithdraw: (intent: StellarPublicWithdrawIntent) =>
+      client.publicWithdraw(intent),
     transfer: (intent: StellarTransferIntent) =>
       client.transfer(
         intent as unknown as TransferIntent<StellarAddress, StellarAssetId, bigint>,

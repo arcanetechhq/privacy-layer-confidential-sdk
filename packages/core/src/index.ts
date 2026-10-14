@@ -6,6 +6,8 @@ export type {
   IntentForKind,
   OperationIntent,
   OperationKind,
+  PublicWithdrawDisclosure,
+  PublicWithdrawIntent,
   TransferIntent,
   WithdrawIntent,
 } from './intents.js';
