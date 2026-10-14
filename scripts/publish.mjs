@@ -5,7 +5,7 @@ import { isDirectRun, readCurrentBranch } from './git-branch.mjs';
 
 export function resolveDistributionTag(ref) {
   const expected = expectedMajorForRef(ref);
-  return expected === undefined ? 'latest' : `v${expected}`;
+  return expected === undefined ? 'latest' : `release-v${expected}`;
 }
 
 export function publishEnvironment() {

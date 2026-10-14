@@ -136,9 +136,9 @@ describe('release/v0 zk-sdk range', () => {
 });
 
 describe('dist tag', () => {
-  it('uses vN for a release branch and latest for main', () => {
-    expect(resolveDistributionTag('release/v0')).toBe('v0');
-    expect(resolveDistributionTag('release/v1')).toBe('v1');
+  it('uses release-vN for a release branch and latest for main', () => {
+    expect(resolveDistributionTag('release/v0')).toBe('release-v0');
+    expect(resolveDistributionTag('release/v1')).toBe('release-v1');
     expect(resolveDistributionTag('main')).toBe('latest');
   });
 
