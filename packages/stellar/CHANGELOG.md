@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+### Patch Changes
+
+- 66e8b5a: Match note commitments as field integers and ignore a cached tree that has no root.
+
 ## 0.8.0
 
 ### Minor Changes
