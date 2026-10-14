@@ -5,8 +5,8 @@ function completeCacheRootMatches(
   merkleRootHex: string,
 ): boolean {
   const cachedRoot = cachedState?.merkleRootHex;
-  if (cachedRoot === undefined || cachedRoot === '') {
-    return true;
+  if (!cachedRoot) {
+    return false;
   }
   return cachedRoot === merkleRootHex;
 }

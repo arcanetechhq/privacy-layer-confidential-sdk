@@ -11,11 +11,33 @@ export function requireCoinNoteFromRecord(record: StellarPrivateRecord): CoinDat
   return record.coinNote;
 }
 
+function commitmentInteger(value: string): bigint | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  try {
+    if (trimmed.startsWith('0x') || trimmed.startsWith('0X')) {
+      return BigInt(trimmed);
+    }
+    if (/[a-fA-F]/.test(trimmed)) {
+      return BigInt(`0x${trimmed}`);
+    }
+    return BigInt(trimmed);
+  } catch {
+    return undefined;
+  }
+}
+
 export function findCommitmentLeafIndex(
   commitments: string[],
   commitment: string,
 ): number {
-  return commitments.indexOf(commitment);
+  const target = commitmentInteger(commitment);
+  if (target === undefined) {
+    return commitments.indexOf(commitment);
+  }
+  return commitments.findIndex((leaf) => commitmentInteger(leaf) === target);
 }
 
 export function buildPrivateRecordFromDeposit(input: {
