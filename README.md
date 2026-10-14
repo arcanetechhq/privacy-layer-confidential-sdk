@@ -101,14 +101,14 @@ Publish from a pull request into the branch that owns the line. You do not edit 
 
 | Branch | Dist-tag | What you can release |
 | --- | --- | --- |
-| `release/v0` | `v0` | Patch and minor fixes for major 0. The Stellar dependency on `@arcanetech/stellar-privacy-pool-zk-sdk` must stay inside major 0 (`>=0.13.0 <1.0.0`). |
-| `release/v1` | `v1` | Patch and minor fixes for major 1. A `major` changeset is rejected. |
+| `release/v0` | `release-v0` | Patch and minor fixes for major 0. The Stellar dependency on `@arcanetech/stellar-privacy-pool-zk-sdk` must stay inside major 0 (`>=0.13.0 <1.0.0`). |
+| `release/v1` | `release-v1` | Patch and minor fixes for major 1. A `major` changeset is rejected. |
 | `main` | `latest` | The current major. A major bump applies to every public package. |
 
 1. Branch from `release/v0`, `release/v1`, or `main`.
 2. Change the code, then run `npm exec changeset`. Choose `patch` or `minor`. On `release/v0` and `release/v1`, do not choose `major`.
 3. Open a pull request into that same branch. CI checks package majors, that a changeset exists for package changes, and `npm run verify`.
-4. After the pull request merges, review and merge the generated "Version Packages" pull request. That merge publishes to npm. The dist-tag comes from the branch name.
+4. After the pull request merges, review and merge the generated "Version Packages" pull request. That merge publishes to npm. A release branch publishes under `release-vN`. `main` publishes under `latest`. npm rejects `v0` and `v1` as dist-tags because those names are semver ranges.
 
 One publish does not ship every workspace package and does not give them the same version. Changesets bumps only the packages named in the changeset. A package that depends on a bumped package gets a patch bump, and its dependency pin is updated. Other packages stay on their current versions and are skipped, because those versions are already on npm. Minor and patch may differ across packages in that commit. Every public package on one branch still shares the same major.
 
