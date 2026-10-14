@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0
+
+### Minor Changes
+
+- 0ce9cd5: Add a public withdraw that publishes sender, recipient, asset, and amount.
+
+### Patch Changes
+
+- Updated dependencies [0ce9cd5]
+  - @arcanetech/privacy-sdk-core@0.4.0
+
 ## 0.7.0
 
 ### Minor Changes
