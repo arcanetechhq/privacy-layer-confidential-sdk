@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+### Minor Changes
+
+- a834996: Add assessIncomingNote so a wallet can tell a decrypted data-layer note is spendable, still pending, or dead before it credits the balance.
+
 ## 0.8.1
 
 ### Patch Changes
