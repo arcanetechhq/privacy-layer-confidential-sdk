@@ -15,7 +15,7 @@ Use these methods when connecting your application's account data and storage to
 | `getPrivateAssetRows(owner)` | Read private asset balances for an account |
 | `upsertPrivateRecords(records)` | Add restored or received private records to SDK state |
 
-A local balance reflects the records loaded into the SDK. Restore the account's records and process incoming deliveries before treating it as complete. Asset metadata comes from your integration's catalog; it is not inferred from a symbol such as `USDC`.
+A local balance reflects the records loaded into the SDK. Read private records with [`@arcanetech/privacy-sdk-data-layer`](/overview/packages#private-records), then [check each incoming note](#check-an-incoming-note) before treating the balance as complete. Asset metadata comes from your integration's catalog; it is not inferred from a symbol such as `USDC`.
 
 ## Pool and recipient lookups
 
@@ -37,6 +37,39 @@ Prefer the network lookup methods for a standard integration. The write methods 
 | `setWalletDefaultPrivateAddressNonce({ owner, nonce })` | Select the saved private address used by spend preparation |
 
 These methods store values produced by the wallet's private-address setup. They do not generate the values. Keep private scalars out of source code, logs, and shared configuration.
+
+## Check an incoming note {#check-an-incoming-note}
+
+Decrypt the note in your application, then call `assessIncomingNote` before `upsertPrivateRecords`. Add the record only when the verdict is `spendable`.
+
+```tsx
+const verdict = await client.assessIncomingNote({
+  note: {
+    value: decrypted.value,
+    nullifier: decrypted.nullifier,
+    secret: decrypted.secret,
+    commitment: decrypted.commitment,
+    asset_hi: decrypted.asset_hi,
+    asset_lo: decrypted.asset_lo,
+  },
+  commitmentHex: deliveredCommitmentHex,
+  privKeyScalarHex,
+  walletPublicKey,
+});
+
+if (verdict.kind === 'spendable') {
+  await client.upsertPrivateRecords([record]);
+}
+```
+
+| Verdict | Meaning |
+| --- | --- |
+| `{ kind: 'spendable' }` | The commitment matches, the leaf is in the pool, and the nullifier is unspent. |
+| `{ kind: 'pending' }` | The commitment matches, and the leaf is not in the pool yet. Keep the note and assess it again after you sync pool state. |
+| `{ kind: 'dead', reason: 'commitment_mismatch' }` | The decrypted fields do not match the delivered commitment. Do not store the note. |
+| `{ kind: 'dead', reason: 'nullifier_consumed' }` | The note is already spent. Do not store the note. |
+
+Pass `poolContractId` when the note belongs to a pool other than the pool on the client. Set `note.application_id` when that note was opened for an application other than the one configured on the client.
 
 ## Updates after a transaction
 

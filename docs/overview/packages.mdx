@@ -5,13 +5,13 @@ description: Map of @arcanetech packages, layered architecture, and the Stellar 
 
 import { PackageMatrix } from '../snippets/package-matrix.jsx';
 
-All public packages use the `@arcanetech` scope and are published on npm. Install the Stellar preset, a state adapter, and the optional Protocol Relay runtime explicitly. **No additional cryptography packages** are required for browser or Node.
+All public packages use the `@arcanetech` scope and are published on npm. Install the Stellar preset, a state adapter, the private-data client when you read private records, and the optional Protocol Relay runtime explicitly. **No additional cryptography packages** are required for browser or Node.
 
 ## Package map
 
 <PackageMatrix />
 
-`@arcanetech/privacy-sdk-stellar` ships bundled runtime assets for browser and Node. Pass network configuration, a wallet adapter, a state adapter, and policy — the preset handles the rest. For private sender or escrow sends, add [`@arcanetech/privacy-sdk-relay`](https://www.npmjs.com/package/@arcanetech/privacy-sdk-relay) — see [Protocol Relay package](#protocol-relay).
+`@arcanetech/privacy-sdk-stellar` ships bundled runtime assets for browser and Node. Pass network configuration, a wallet adapter, a state adapter, and policy — the preset handles the rest. To read private records, add [`@arcanetech/privacy-sdk-data-layer`](https://www.npmjs.com/package/@arcanetech/privacy-sdk-data-layer) — see [Private records package](#private-records). For private sender or escrow sends, add [`@arcanetech/privacy-sdk-relay`](https://www.npmjs.com/package/@arcanetech/privacy-sdk-relay) — see [Protocol Relay package](#protocol-relay). Public withdraw is [`publicWithdraw`](/application-development/how-to/public-withdraw).
 
 ## Layered architecture
 
@@ -19,21 +19,25 @@ All public packages use the `@arcanetech` scope and are published on npm. Instal
 flowchart BT
   App[Your application]
   Stellar["@arcanetech/privacy-sdk-stellar"]
+  DataLayer["@arcanetech/privacy-sdk-data-layer"]
   Relay["@arcanetech/privacy-sdk-relay"]
   Core["@arcanetech/privacy-sdk-core"]
   Memory["@arcanetech/privacy-sdk-state-memory"]
   Redux["@arcanetech/privacy-sdk-state-redux"]
 
   App --> Stellar
+  App --> DataLayer
   App --> Relay
   App --> Memory
   App --> Redux
   Stellar --> Core
+  DataLayer --> Core
   Memory --> Core
   Redux --> Core
 ```
 
-- **Core** — intents, prepare/execute lifecycle, errors, progress events.
+- **Core** — intents, prepare/execute lifecycle, errors, progress events, and the private-data authorization envelope.
+- **Private data** — HTTP client for private records. You pass the schemas. `find` returns records only after your schema accepts the payload. Challenge methods stop before a request when you omit the completion schema.
 - **Relay** — Protocol Relay runtime: admission, polling, retry, and fallback over caller-supplied ports. It owns statuses, reason codes, and package JSON serialization, follows a caller-supplied submission path, and never inspects opaque package payloads or deposit amounts. Relaying is enabled only when the caller sets `relayConfig.origin`; otherwise the runtime Direct-submits and does not contact a relayer. Settlement polling is bounded. The package does not depend on Stellar or Soroban.
 - **State adapters** — persistence for SDK domain state.
 - **Network preset** — `@arcanetech/privacy-sdk-stellar`: client, contract bindings, and state schema extensions.
@@ -46,7 +50,8 @@ Internal transitive dependencies are not part of the public integration surface.
 
 | Import                                                                                         | Purpose                                                                                                                 |
 | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `@arcanetech/privacy-sdk-core`                                                                 | Intents, lifecycle helpers, error types, progress events                                                                |
+| `@arcanetech/privacy-sdk-core`                                                                 | Intents, lifecycle helpers, error types, progress events, authorization envelope                                        |
+| `@arcanetech/privacy-sdk-data-layer`                                                           | Private-record HTTP client. Checks caller-supplied schemas before returning                                             |
 | [`@arcanetech/privacy-sdk-relay`](https://www.npmjs.com/package/@arcanetech/privacy-sdk-relay) | Protocol relay runtime (ports, polling, retry, fallback) and the wire vocabulary (statuses, reason codes, package JSON) |
 | `@arcanetech/privacy-sdk-state-memory`                                                         | In-memory state adapter for prototypes and tests                                                                        |
 | `@arcanetech/privacy-sdk-state-redux`                                                          | Redux Toolkit adapter for React apps                                                                                    |
@@ -64,7 +69,9 @@ Internal transitive dependencies are not part of the public integration surface.
 
 Use `@arcanetech/privacy-sdk-stellar` for **Stellar** with **Soroban** smart contracts:
 
-- **Pool contract** — private deposits, transfers, and withdrawals.
+- **Pool contract** — private deposits, transfers, withdrawals, and public withdrawals.
+- **`publicWithdraw()`** — spends one private note and pays its full value to the connected wallet. Sender, recipient, asset, and amount are public. See [Public withdraw](/application-development/how-to/public-withdraw).
+- **`assessIncomingNote()`** — reports whether a decrypted incoming note is spendable, still pending, or dead before you credit the balance. See [State methods](/integration/data-sources#check-an-incoming-note).
 - **Private-address registry** — maps public Stellar accounts to private payment addresses.
 - **Soroban RPC** — submission and confirmation.
 - **`createStellarPrivacyClient()`** — main browser entrypoint.
@@ -84,6 +91,20 @@ Use `@arcanetech/privacy-sdk-stellar` for **Stellar** with **Soroban** smart con
 - `transactEnvironment` — network, KYT, optional `zkConfigNonce` / `zkArtifactBaseUrl`, and transaction signing hooks passed at client creation.
 
 For React wiring and operation examples, continue to [Stellar application development](/application-development/setup).
+
+## Private records package {#private-records}
+
+Install [`@arcanetech/privacy-sdk-data-layer`](https://www.npmjs.com/package/@arcanetech/privacy-sdk-data-layer) when the app reads private records. Use the `release-v0` tag. That tag publishes `0.1.0`.
+
+```bash
+npm install @arcanetech/privacy-sdk-data-layer@release-v0
+```
+
+`createPrivateDataProvider` returns `find`, `createChallenge`, and `completeChallenge`. Pass a Zod schema for each record. Pass a completion schema, a protocol, and an authorizer when the read needs a signed challenge. The provider returns a value only after your schema accepts it. `@arcanetech/privacy-sdk-core` rejects a challenge or proof that misses the authorization envelope before a request is sent.
+
+Omit `completionSchema` when you only list records. `createChallenge` and `completeChallenge` then stop before a request.
+
+Supply the record schema, data type, and protocol for your records. After you decrypt an incoming note, call [`assessIncomingNote`](/integration/data-sources#check-an-incoming-note) before you add it to the spendable balance. To pay a note's full value to the connected wallet, use [Public withdraw](/application-development/how-to/public-withdraw).
 
 ## Protocol Relay package {#protocol-relay}
 
@@ -116,6 +137,7 @@ flowchart TD
 
   Learn --> CoreOnly["core only (read API)"]
   StellarApp --> StellarStack["core + stellar + state-memory"]
+  StellarApp --> PrivateRecords["+ privacy-sdk-data-layer"]
   StellarApp --> PrivateSender[Private sender / escrow]
   PrivateSender --> Relay["+ privacy-sdk-relay"]
   ReactProd --> ReduxStack["+ state-redux (optional)"]

@@ -9,7 +9,7 @@
 - SDK docs use Stripe-style developer voice: open with the outcome, then the step; second person; active voice; one idea per sentence; imperative headings; code immediately after the instruction. Warn only when a mistake is expensive (fixture IDs vs a live stand, demo audit key, Node engine). Do not hedge ("learning exercise", "not a production app layout") or sell architecture ("extensibility").
 - SDK docs must not name internal backend products or concrete REST endpoint paths; describe integrations generically (e.g. asset catalog sync, registry status).
 - State-integration docs should lead with in-memory adapter examples and keep Redux as an optional adapter path; omit custom-adapter outline sections and do not mention `@arcanetech/privacy-sdk-testing` (not shipped).
-- For internal workspace dependencies in npm workspaces, use `"*"` (not `workspace:*`, which npm does not support) so CI links local packages instead of resolving stale semver pins.
+- Pin internal workspace dependencies to the exact package version on this release line (for example `"0.4.0"`). Do not use `"*"` or `workspace:*`: `"*"` can resolve a package from another major, and npm does not support `workspace:*`.
 - With `exactOptionalPropertyTypes: true`, omit optional object properties instead of passing `undefined`; `StellarPreparedOperation` `kind` and `intent` are not a discriminated union—narrow with explicit casts after `kind` checks.
 
 ## Learned Workspace Facts

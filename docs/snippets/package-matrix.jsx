@@ -2,7 +2,14 @@ export const PackageMatrix = () => {
   const rows = [
     {
       name: '@arcanetech/privacy-sdk-core',
-      role: 'Intents, lifecycle, errors, events, adapter contracts',
+      role: 'Intents, lifecycle, errors, events, adapter contracts, authorization envelope',
+      browser: true,
+      node: true,
+      tests: true,
+    },
+    {
+      name: '@arcanetech/privacy-sdk-data-layer',
+      role: 'Private-record HTTP client checked with the schemas you pass',
       browser: true,
       node: true,
       tests: true,

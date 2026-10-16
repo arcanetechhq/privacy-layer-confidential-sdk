@@ -69,3 +69,14 @@ export {
 
 export { PrivacyClient } from './privacy-client.js';
 export { AdapterPrivacyClient } from './adapter-privacy-client.js';
+
+export type {
+  DataAuthorizationChallenge,
+  DataAuthorizationProof,
+  DataAuthorizer,
+} from './data-authorization.js';
+export {
+  authorizePrivateData,
+  dataAuthorizationChallengeSchema,
+  dataAuthorizationProofSchema,
+} from './data-authorization.js';

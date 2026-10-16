@@ -52,6 +52,8 @@ A **private record** represents spendable balance inside the pool:
 
 After a successful withdraw or transfer, spent records are marked consumed and change notes may appear as new records.
 
+A decrypted incoming note stays out of spendable balance until [`assessIncomingNote`](/integration/data-sources#check-an-incoming-note) returns `spendable`.
+
 ## Pool state
 
 The pool maintains a Merkle structure of commitments. The SDK caches:

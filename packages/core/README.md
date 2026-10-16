@@ -6,12 +6,13 @@ Network-agnostic privacy SDK core for Arcane private payment flows.
 
 This package defines:
 
-- operation intents for `deposit`, `transfer`, and `withdraw`
+- operation intents for `deposit`, `transfer`, `withdraw`, and `publicWithdraw`
 - prepared and rejected operation results
 - typed runtime errors
 - progress events
 - wallet, storage, network, and policy adapter contracts
 - a reusable `AdapterPrivacyClient` orchestrator
+- a wide authorization envelope (`protocol`, `message`, `fields`) and `authorizePrivateData`, which rejects a payload that misses that shape before the authorizer runs
 
 The core package intentionally contains no Stellar, Soroban, ZK, KYT, or low-level SDK dependencies.
 
@@ -62,4 +63,4 @@ Execution emits stable user-facing stages:
 ## Related Docs
 
 - [Root README](../../README.md)
-- [Mintlify core docs](../../docs/packages/core.mdx)
+- [Operations](../../docs/concepts/operations.mdx)

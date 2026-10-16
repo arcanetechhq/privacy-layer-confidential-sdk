@@ -11,6 +11,8 @@ This package provides:
 - `@arcanetech/privacy-sdk-stellar/testing` for fake transact engines in unit tests
 - Stellar wallet, storage, and policy adapter contracts
 - disclosure validation for currently supported Stellar routes
+- `publicWithdraw()` spends one private note and pays its full value to the connected wallet. Sender, recipient, asset, and amount are public. `listPublicWithdrawNotes()` lists unspent notes from local state
+- `assessIncomingNote()` reports whether a decrypted incoming note is spendable, still pending, or dead before you credit the balance
 - orchestration over `@arcanetech/stellar-privacy-pool-zk-sdk`
 - `requiredSubmissionMethod()` (`@arcanetech/privacy-sdk-stellar/transact`) — chooses Direct Submission vs Protocol Relay from a prepared operation; escrow sends require relay and refuse a positive public deposit; escrow sweeps use Direct Submission (wallet-signed)
 - `buildBlindedRecipientTagChallengeMessage()` (`@arcanetech/privacy-sdk-stellar/transact`) — builds the wallet-signed challenge used to issue blinded recipient tags so a recipient can discover escrow notes after they register
@@ -67,4 +69,5 @@ The Stellar preset loads proving artifacts from the CDN baked into `@arcanetech/
 ## Related Docs
 
 - [Root README](../../README.md)
-- [Mintlify Stellar docs](../../docs/packages/stellar.mdx)
+- [Public withdraw](../../docs/application-development/how-to/public-withdraw.mdx)
+- [State methods](../../docs/integration/data-sources.mdx)
