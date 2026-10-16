@@ -23,6 +23,11 @@ export type {
   StellarPublicWithdrawNotePage,
 } from './transact/public-withdraw/list-notes.js';
 export type { StellarPrivacyStateHydration } from './client/hydrate-state.js';
+export type {
+  IncomingNoteAssessment,
+  IncomingNoteDeadReason,
+  IncomingNoteFields,
+} from './client/assess-incoming-note.js';
 export { stellarStateDefinitions } from './state/definitions/index.js';
 export {
   listWalletPrivateAddressRecordsForOwnerFromStateSnapshot,
