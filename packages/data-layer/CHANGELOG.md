@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [a72b3bf]
+  - @arcanetech/privacy-sdk-core@0.5.0
+
 ## 0.1.0
 
 ### Minor Changes
