@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- a72b3bf: Add the authorization envelope that the 0.x private-data client checks before a request.
+
 ## 0.4.0
 
 ### Minor Changes

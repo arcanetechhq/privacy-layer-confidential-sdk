@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.3
+
+### Patch Changes
+
+- Updated dependencies [a72b3bf]
+  - @arcanetech/privacy-sdk-core@0.5.0
+
 ## 0.8.2
 
 ### Patch Changes
