@@ -1,6 +1,6 @@
 {
   "name": "@arcanetech/privacy-sdk-stellar",
-  "version": "0.9.0",
+  "version": "0.8.2",
   "description": "Stellar preset for the Arcane privacy SDK",
   "type": "module",
   "browser": "./dist/index.js",
