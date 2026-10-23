@@ -39,8 +39,9 @@ describe('Underfunded Step', () => {
   });
 
   it('does not add a Deposit to a later Payout Step', () => {
-    const deposit = step(0n, 0n, [note(5n, 'left')]);
-    const transfer = step(0n, 1n, [note(6n, 'more')]);
+    const left = note(5n, 'left');
+    const deposit = step(0n, 0n, [left]);
+    const transfer = step(0n, 1n, [note(6n, 'more')], [left]);
     const withdrawal = step(0n, 2n, []);
     const plan: Plan = {
       rows: [
@@ -58,9 +59,10 @@ describe('Underfunded Step', () => {
     expect(underfundedSteps(plan)).toEqual([transfer]);
   });
 
-  it('counts a note an earlier Step left when a later Step did not spend it', () => {
-    const deposit = step(0n, 0n, [note(10n, 'note-a'), note(3n, 'note-b')]);
-    const transfer = step(0n, 1n, [note(1n, 'note-c')], [note(10n, 'note-a')]);
+  it('does not fund a Step with a note that Step does not spend', () => {
+    const noteA = note(10n, 'note-a');
+    const deposit = step(0n, 0n, [noteA, note(3n, 'note-b')]);
+    const transfer = step(0n, 1n, [note(1n, 'note-c')], [noteA]);
     const withdrawal = step(0n, 2n, [note(4n, 'note-d')]);
     const plan: Plan = {
       rows: [
@@ -75,27 +77,47 @@ describe('Underfunded Step', () => {
       ],
     };
 
-    expect(underfundedSteps(plan)).toEqual([]);
+    expect(underfundedSteps(plan)).toEqual([withdrawal]);
   });
 
-  it('drops a note once an earlier Step spends it', () => {
-    const deposit = step(0n, 0n, [note(10n, 'note-a'), note(3n, 'note-b')]);
-    const transfer = step(0n, 1n, [note(1n, 'note-c')], [note(10n, 'note-a')]);
-    const withdrawal = step(0n, 2n, [note(5n, 'note-d')]);
+  it('does not let an unspent note cover a short pinned input', () => {
+    const noteA = note(5n, 'note-a');
+    const deposit = step(0n, 0n, [noteA, note(10n, 'note-b')]);
+    const transfer = step(0n, 1n, [note(9n, 'out')], [noteA]);
     const plan: Plan = {
       rows: [
-        { kind: 'deposit', amount: 13n, step: deposit },
+        { kind: 'deposit', amount: 15n, step: deposit },
         {
           kind: 'payout',
           account: 'bob-account',
           amount: 0n,
           transfer,
-          withdrawal,
+          withdrawal: step(0n, 2n, []),
         },
       ],
     };
 
-    expect(underfundedSteps(plan)).toEqual([withdrawal]);
+    expect(underfundedSteps(plan)).toEqual([transfer]);
+  });
+
+  it('uses the amount earlier Steps left, not a larger amount on the pinned input', () => {
+    const created = note(5n, 'real');
+    const deposit = step(0n, 0n, [created]);
+    const transfer = step(0n, 1n, [note(9n, 'out')], [note(100n, 'real')]);
+    const plan: Plan = {
+      rows: [
+        { kind: 'deposit', amount: 5n, step: deposit },
+        {
+          kind: 'payout',
+          account: 'bob-account',
+          amount: 0n,
+          transfer,
+          withdrawal: step(0n, 2n, []),
+        },
+      ],
+    };
+
+    expect(underfundedSteps(plan)).toEqual([transfer]);
   });
 
   it('ignores a pinned input an earlier Step did not leave', () => {
@@ -125,9 +147,11 @@ describe('Underfunded Step', () => {
   });
 
   it('does not treat a Payout amount as notes left or as a pinned output', () => {
-    const deposit = step(0n, 0n, [note(10n, 'left')]);
-    const transfer = step(0n, 1n, [note(10n, 'moved')], [note(10n, 'left')]);
-    const withdrawal = step(0n, 2n, [], [note(10n, 'moved')]);
+    const left = note(10n, 'left');
+    const moved = note(10n, 'moved');
+    const deposit = step(0n, 0n, [left]);
+    const transfer = step(0n, 1n, [moved], [left]);
+    const withdrawal = step(0n, 2n, [], [moved]);
     const plan: Plan = {
       rows: [
         { kind: 'deposit', amount: 10n, step: deposit },

@@ -21,6 +21,12 @@ const remainder = {
   nullifierHash: 'nullifier-remainder',
 };
 
+const afterTransfer = {
+  plaintext: { amount: 7n, accumulator: 'pin-withdrawal' },
+  commitment: 'commitment-after-transfer',
+  nullifierHash: 'nullifier-after-transfer',
+};
+
 const plan: Plan = {
   rows: [
     {
@@ -42,18 +48,12 @@ const plan: Plan = {
         freeTokens: 1n,
         interval: 0n,
         pinnedInputs: [remainder],
-        pinnedOutputs: [
-          {
-            plaintext: { amount: 7n, accumulator: 'pin-withdrawal' },
-            commitment: 'commitment-after-transfer',
-            nullifierHash: 'nullifier-after-transfer',
-          },
-        ],
+        pinnedOutputs: [afterTransfer],
       },
       withdrawal: {
         freeTokens: 1n,
         interval: 0n,
-        pinnedInputs: [],
+        pinnedInputs: [afterTransfer],
         pinnedOutputs: [],
       },
     },
@@ -88,7 +88,7 @@ const executed = isExecutedStep(payout.transfer, presence);
 const blocked = isBlockedStep(payout.transfer, presence);
 ```
 
-`funded` is true because the Deposit of 10 equals the Payout of 6 plus Free tokens 2, 1, and 1. `shortfalls` is empty. `executed` is true because that transfer's pinned input nullifier is consumed and its pinned output commitment is in the pool tree. `blocked` is false.
+`funded` is true because the Deposit of 10 equals the Payout of 6 plus Free tokens 2, 1, and 1. `shortfalls` is empty: the transfer spends the Remainder the Deposit left, and the withdrawal spends the note that transfer left. `executed` is true because that transfer's pinned input nullifier is consumed and its pinned output commitment is in the pool tree. `blocked` is false.
 
 ## What the document stores
 
