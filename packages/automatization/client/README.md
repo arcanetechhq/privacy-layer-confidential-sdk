@@ -93,15 +93,15 @@ const executed = payout.transfer.executed;
 const blocked = payout.transfer.blocked;
 ```
 
-`depositAmount` is 10. `account` is `bob-account`. `amount` is 6. `pinnedInputs` is the Remainder. `pinnedOutputs` is the next pinned note. `freeTokens` is 1. `executed` is true because that transfer's pinned input nullifier is consumed and its pinned output commitment is in the pool tree. `blocked` is false.
+`depositAmount` is 10. `account` is `bob-account`. `amount` is 6. `pinnedInputs` is the Remainder. `pinnedOutputs` is the next pinned note. `freeTokens` is 1. `executed` is true. That transfer's pinned input nullifier is consumed. Its pinned output commitment is in the pool tree. `blocked` is false.
 
-## What the view shows
+## Read the progress view
 
-Each Row stays in Plan order. A Deposit shows its public amount and its Step. A Payout shows the Stellar account, the public amount, the transfer Step, and the withdrawal Step.
+Each Row stays in Plan order. A Deposit shows its public amount. A Deposit shows its Step. A Payout shows the Stellar account. A Payout shows the public amount. A Payout shows the transfer Step. A Payout shows the withdrawal Step.
 
-Each Step shows its pinned input notes, its pinned output notes, and Free tokens as an amount. A Remainder is one of those pinned notes. Executed and blocked come from that Step's pinned nullifiers and pinned commitments in the report you pass.
+Each Step shows its pinned input notes. Each Step shows its pinned output notes. Each Step shows Free tokens as an amount. A Remainder is one of those pinned notes. Executed comes from that Step's pinned nullifiers in the report you pass. Executed also requires that Step's pinned commitments in the same report. Blocked comes from that report.
 
-The view has no Service scalar and no Execution material. Fee notes and Unspent notes are not inputs. You pass the presence report.
+The view has no Service scalar. The view has no Execution material. Fee notes are not inputs. Unspent notes are not inputs. You pass the presence report.
 
 ## Related docs
 

@@ -42,7 +42,7 @@ flowchart BT
 ```
 
 - **Plan** — a Plan for one asset. Check that it is funded, which Step is underfunded, and whether a Step is executed or blocked. You pass a presence report. This package does not query a chain.
-- **Plan progress** — show a saved Plan. List each Row, each Payout account and public amount, each pinned note, and each Step's Free tokens. You pass which pinned nullifiers are consumed and which pinned commitments are in the pool tree. The package marks each Step executed or blocked.
+- **Plan progress** — show a saved Plan. List each Row. List each Payout account. List each Payout's public amount. List each pinned note. List each Step's Free tokens. You pass which pinned nullifiers are consumed. You pass which pinned commitments are in the pool tree. The package marks each Step executed. The package marks each Step blocked.
 - **Core** — intents, prepare/execute lifecycle, errors, progress events, and the private-data authorization envelope.
 - **Private data** — HTTP client for private records. You pass the schemas. `find` returns records only after your schema accepts the payload. Challenge methods stop before a request when you omit the completion schema.
 - **Relay** — Protocol Relay runtime: admission, polling, retry, and fallback over caller-supplied ports. It owns statuses, reason codes, and package JSON serialization, follows a caller-supplied submission path, and never inspects opaque package payloads or deposit amounts. Relaying is enabled only when the caller sets `relayConfig.origin`; otherwise the runtime Direct-submits and does not contact a relayer. Settlement polling is bounded. The package does not depend on Stellar or Soroban.
@@ -296,9 +296,9 @@ const executed = payout.transfer.executed;
 const blocked = payout.transfer.blocked;
 ```
 
-`depositAmount` is 10. `account` is `bob-account`. `amount` is 6. `pinnedInputs` is the Remainder. `pinnedOutputs` is the next pinned note. `freeTokens` is 1. `executed` is true because that transfer's pinned input nullifier is consumed and its pinned output commitment is in the pool tree. `blocked` is false.
+`depositAmount` is 10. `account` is `bob-account`. `amount` is 6. `pinnedInputs` is the Remainder. `pinnedOutputs` is the next pinned note. `freeTokens` is 1. `executed` is true. That transfer's pinned input nullifier is consumed. Its pinned output commitment is in the pool tree. `blocked` is false.
 
-Each Step shows Free tokens as an amount. The view has no Service scalar and no Execution material. You pass the presence report.
+Each Step shows Free tokens as an amount. The view has no Service scalar. The view has no Execution material. You pass the presence report.
 
 ## Protocol Relay package {#protocol-relay}
 
