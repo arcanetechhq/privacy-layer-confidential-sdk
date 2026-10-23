@@ -1,6 +1,13 @@
 export const PackageMatrix = () => {
   const rows = [
     {
+      name: '@arcanetech/privacy-sdk-automatization-client',
+      role: 'Plan progress for a saved Plan: Rows, Payouts, pinned notes, and executed or blocked Steps',
+      browser: true,
+      node: true,
+      tests: true,
+    },
+    {
       name: '@arcanetech/privacy-sdk-automatization-plan',
       role: 'Plan document with funded, underfunded, executed, and blocked checks',
       browser: true,
