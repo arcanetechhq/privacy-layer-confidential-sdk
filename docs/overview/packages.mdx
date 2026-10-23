@@ -21,6 +21,7 @@ flowchart BT
   Stellar["@arcanetech/privacy-sdk-stellar"]
   DataLayer["@arcanetech/privacy-sdk-data-layer"]
   Relay["@arcanetech/privacy-sdk-relay"]
+  Plan["@arcanetech/privacy-sdk-automatization-plan"]
   Core["@arcanetech/privacy-sdk-core"]
   Memory["@arcanetech/privacy-sdk-state-memory"]
   Redux["@arcanetech/privacy-sdk-state-redux"]
@@ -28,6 +29,7 @@ flowchart BT
   App --> Stellar
   App --> DataLayer
   App --> Relay
+  App --> Plan
   App --> Memory
   App --> Redux
   Stellar --> Core
@@ -36,6 +38,7 @@ flowchart BT
   Redux --> Core
 ```
 
+- **Plan** — a Plan for one asset. Check that it is funded, which Step is underfunded, and whether a Step is executed or blocked. You pass a presence report. This package does not query a chain.
 - **Core** — intents, prepare/execute lifecycle, errors, progress events, and the private-data authorization envelope.
 - **Private data** — HTTP client for private records. You pass the schemas. `find` returns records only after your schema accepts the payload. Challenge methods stop before a request when you omit the completion schema.
 - **Relay** — Protocol Relay runtime: admission, polling, retry, and fallback over caller-supplied ports. It owns statuses, reason codes, and package JSON serialization, follows a caller-supplied submission path, and never inspects opaque package payloads or deposit amounts. Relaying is enabled only when the caller sets `relayConfig.origin`; otherwise the runtime Direct-submits and does not contact a relayer. Settlement polling is bounded. The package does not depend on Stellar or Soroban.
@@ -50,6 +53,7 @@ Internal transitive dependencies are not part of the public integration surface.
 
 | Import                                                                                         | Purpose                                                                                                                 |
 | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `@arcanetech/privacy-sdk-automatization-plan`                                                  | Plan document. Funded, underfunded, executed, and blocked checks                                                           |
 | `@arcanetech/privacy-sdk-core`                                                                 | Intents, lifecycle helpers, error types, progress events, authorization envelope                                        |
 | `@arcanetech/privacy-sdk-data-layer`                                                           | Private-record HTTP client. Checks caller-supplied schemas before returning                                             |
 | [`@arcanetech/privacy-sdk-relay`](https://www.npmjs.com/package/@arcanetech/privacy-sdk-relay) | Protocol relay runtime (ports, polling, retry, fallback) and the wire vocabulary (statuses, reason codes, package JSON) |
@@ -105,6 +109,34 @@ npm install @arcanetech/privacy-sdk-data-layer@release-v0
 Omit `completionSchema` when you only list records. `createChallenge` and `completeChallenge` then stop before a request.
 
 Supply the record schema, data type, and protocol for your records. After you decrypt an incoming note, call [`assessIncomingNote`](/integration/data-sources#check-an-incoming-note) before you add it to the spendable balance. To pay a note's full value to the connected wallet, use [Public withdraw](/application-development/how-to/public-withdraw).
+
+## Plan document {#plan-document}
+
+Install `@arcanetech/privacy-sdk-automatization-plan` when you hold a Plan and decide whether it is funded, which Step is underfunded, and whether a Step is executed or blocked.
+
+```bash
+npm install @arcanetech/privacy-sdk-automatization-plan
+```
+
+Construct the Plan from Deposit and Payout rows. Read each pinned note's plaintext, commitment, and nullifier hash from the Step. Read Free tokens and the interval from the Step. Read the account and public amount from the Payout. Read `transactionId` after that Step is submitted.
+
+```ts
+import {
+  isBlockedStep,
+  isExecutedStep,
+  isFundedPlan,
+  underfundedSteps,
+} from '@arcanetech/privacy-sdk-automatization-plan';
+
+const funded = isFundedPlan(plan);
+const shortfalls = underfundedSteps(plan);
+const executed = isExecutedStep(step, presence);
+const blocked = isBlockedStep(step, presence);
+```
+
+Call `isFundedPlan` to check that Deposits equal Payouts plus the Free tokens of every Step. Call `underfundedSteps` to list each Underfunded Step. Call `isExecutedStep` and `isBlockedStep` with the pinned nullifier hashes that are consumed and the pinned output commitments that are in the pool tree.
+
+The note plaintext stores the amount and the accumulator. It does not store an owner scalar. Fee notes and Unspent notes are not stored on the Plan and are not part of the executed check.
 
 ## Protocol Relay package {#protocol-relay}
 

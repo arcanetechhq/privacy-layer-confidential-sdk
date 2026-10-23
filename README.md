@@ -16,6 +16,7 @@ English-language monorepo for the Arcane high-level privacy SDK.
 
 | Package                                                                 | Description                                                                                            |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`@arcanetech/privacy-sdk-automatization-plan`](./packages/automatization/plan/README.md) | Plan document with funded, underfunded, executed, and blocked checks                          |
 | [`@arcanetech/privacy-sdk-core`](./packages/core/README.md)             | Network-agnostic intents, prepared operations, errors, progress events, and adapter contracts          |
 | [`@arcanetech/privacy-sdk-data-layer`](./packages/data-layer/README.md) | Private-record HTTP client. Checks the schemas you pass before it returns records or a completion      |
 | [`@arcanetech/privacy-sdk-relay`](./packages/relay/README.md)           | Chain-agnostic protocol relay runtime (admission, polling, retry, fallback) over caller-supplied ports |
@@ -119,6 +120,7 @@ Maintainer steps for cutting a new `release/vN`, the `1.0.0` / `1.1.0` split, an
 
 ## Package READMEs
 
+- [Plan package README](./packages/automatization/plan/README.md)
 - [Core package README](./packages/core/README.md)
 - [Data-layer package README](./packages/data-layer/README.md)
 - [Relay package README](./packages/relay/README.md)

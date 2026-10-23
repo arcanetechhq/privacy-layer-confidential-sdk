@@ -1,0 +1,33 @@
+{
+  "name": "@arcanetech/privacy-sdk-automatization-plan",
+  "version": "0.0.0",
+  "description": "Shared Plan document: funded, underfunded, executed, and blocked checks",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arcanetechhq/privacy-layer-confidential-sdk.git",
+    "directory": "packages/automatization/plan"
+  },
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "access": "public"
+  }
+}
