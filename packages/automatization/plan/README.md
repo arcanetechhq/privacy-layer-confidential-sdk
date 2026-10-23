@@ -10,7 +10,7 @@ npm install @arcanetech/privacy-sdk-automatization-plan
 
 ## Check a Plan
 
-Construct the Plan from Deposit and Payout rows. Pass a presence report when you already know which pinned nullifier hashes are consumed and which pinned output commitments are in the pool tree.
+Build one Deposit and one Payout. Read each pinned note's plaintext, commitment, and nullifier hash. Read Free tokens and the interval from each Step. Read the account and public amount from the Payout. Set `transactionId` only after that Step is submitted.
 
 ```ts
 import {
@@ -18,19 +18,72 @@ import {
   isExecutedStep,
   isFundedPlan,
   underfundedSteps,
+  type PinnedNotePresence,
+  type Plan,
 } from '@arcanetech/privacy-sdk-automatization-plan';
+
+const remainder = {
+  plaintext: { amount: 8n, accumulator: 'pin-transfer' },
+  commitment: 'commitment-remainder',
+  nullifierHash: 'nullifier-remainder',
+};
+
+const plan: Plan = {
+  rows: [
+    {
+      kind: 'deposit',
+      amount: 10n,
+      step: {
+        freeTokens: 2n,
+        interval: 0n,
+        pinnedInputs: [],
+        pinnedOutputs: [remainder],
+        transactionId: 'tx-deposit',
+      },
+    },
+    {
+      kind: 'payout',
+      account: 'bob-account',
+      amount: 6n,
+      transfer: {
+        freeTokens: 1n,
+        interval: 0n,
+        pinnedInputs: [remainder],
+        pinnedOutputs: [
+          {
+            plaintext: { amount: 7n, accumulator: 'pin-withdrawal' },
+            commitment: 'commitment-after-transfer',
+            nullifierHash: 'nullifier-after-transfer',
+          },
+        ],
+      },
+      withdrawal: {
+        freeTokens: 1n,
+        interval: 0n,
+        pinnedInputs: [],
+        pinnedOutputs: [],
+      },
+    },
+  ],
+};
+
+const payout = plan.rows[1];
+if (payout?.kind !== 'payout') {
+  throw new Error('expected a Payout');
+}
+
+const presence: PinnedNotePresence = {
+  consumedNullifierHashes: ['nullifier-remainder'],
+  outputCommitmentsInPoolTree: ['commitment-after-transfer'],
+};
 
 const funded = isFundedPlan(plan);
 const shortfalls = underfundedSteps(plan);
-const executed = isExecutedStep(step, presence);
-const blocked = isBlockedStep(step, presence);
+const executed = isExecutedStep(payout.transfer, presence);
+const blocked = isBlockedStep(payout.transfer, presence);
 ```
 
-A funded Plan has Deposits equal to its Payouts plus the Free tokens of every Step.
-
-An Underfunded Step has pinned outputs and Free tokens that exceed the notes earlier Steps left for it, plus the Deposit on its own Row when that Row is a Deposit.
-
-A Step is executed only when every pinned input nullifier is consumed and every pinned output commitment is in the pool tree. A Step that is not executed while at least one pinned input nullifier is consumed is blocked.
+`funded` is true because the Deposit of 10 equals the Payout of 6 plus Free tokens 2, 1, and 1. `shortfalls` is empty. `executed` is true because that transfer's pinned input nullifier is consumed and its pinned output commitment is in the pool tree. `blocked` is false.
 
 ## What the document stores
 
