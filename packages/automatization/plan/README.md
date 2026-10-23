@@ -13,14 +13,7 @@ npm install @arcanetech/privacy-sdk-automatization-plan
 Build one Deposit and one Payout. Read each pinned note's plaintext, commitment, and nullifier hash. Read Free tokens and the interval from each Step. Read the account and public amount from the Payout. Set `transactionId` only after that Step is submitted.
 
 ```ts
-import {
-  isBlockedStep,
-  isExecutedStep,
-  isFundedPlan,
-  underfundedSteps,
-  type PinnedNotePresence,
-  type Plan,
-} from '@arcanetech/privacy-sdk-automatization-plan';
+import type { Plan } from '@arcanetech/privacy-sdk-automatization-plan';
 
 const remainder = {
   plaintext: { amount: 8n, accumulator: 'pin-transfer' },
@@ -66,6 +59,18 @@ const plan: Plan = {
     },
   ],
 };
+```
+
+Call `isFundedPlan` and `underfundedSteps` on that Plan. Call `isExecutedStep` and `isBlockedStep` with a report of which pinned nullifiers are consumed and which pinned commitments are in the pool tree.
+
+```ts
+import {
+  isBlockedStep,
+  isExecutedStep,
+  isFundedPlan,
+  underfundedSteps,
+  type PinnedNotePresence,
+} from '@arcanetech/privacy-sdk-automatization-plan';
 
 const payout = plan.rows[1];
 if (payout?.kind !== 'payout') {

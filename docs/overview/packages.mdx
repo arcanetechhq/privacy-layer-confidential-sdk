@@ -110,9 +110,9 @@ Omit `completionSchema` when you only list records. `createChallenge` and `compl
 
 Supply the record schema, data type, and protocol for your records. After you decrypt an incoming note, call [`assessIncomingNote`](/integration/data-sources#check-an-incoming-note) before you add it to the spendable balance. To pay a note's full value to the connected wallet, use [Public withdraw](/application-development/how-to/public-withdraw).
 
-## Plan document {#plan-document}
+## Check a Plan {#plan-document}
 
-Install `@arcanetech/privacy-sdk-automatization-plan` when you hold a Plan and decide whether it is funded, which Step is underfunded, and whether a Step is executed or blocked.
+Decide whether a Plan is funded, which Step is underfunded, and whether a Step is executed or blocked. Install the package.
 
 ```bash
 npm install @arcanetech/privacy-sdk-automatization-plan
@@ -121,14 +121,7 @@ npm install @arcanetech/privacy-sdk-automatization-plan
 Build one Deposit and one Payout. Read each pinned note's plaintext, commitment, and nullifier hash. Read Free tokens and the interval from each Step. Read the account and public amount from the Payout. Set `transactionId` only after that Step is submitted.
 
 ```ts
-import {
-  isBlockedStep,
-  isExecutedStep,
-  isFundedPlan,
-  underfundedSteps,
-  type PinnedNotePresence,
-  type Plan,
-} from '@arcanetech/privacy-sdk-automatization-plan';
+import type { Plan } from '@arcanetech/privacy-sdk-automatization-plan';
 
 const remainder = {
   plaintext: { amount: 8n, accumulator: 'pin-transfer' },
@@ -174,6 +167,18 @@ const plan: Plan = {
     },
   ],
 };
+```
+
+Call `isFundedPlan` and `underfundedSteps` on that Plan. Call `isExecutedStep` and `isBlockedStep` with a report of which pinned nullifiers are consumed and which pinned commitments are in the pool tree.
+
+```ts
+import {
+  isBlockedStep,
+  isExecutedStep,
+  isFundedPlan,
+  underfundedSteps,
+  type PinnedNotePresence,
+} from '@arcanetech/privacy-sdk-automatization-plan';
 
 const payout = plan.rows[1];
 if (payout?.kind !== 'payout') {
