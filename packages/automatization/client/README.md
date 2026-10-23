@@ -1,6 +1,6 @@
 # @arcanetech/privacy-sdk-automatization-client
 
-Show a saved Plan and how far each Step has gone. A browser can use this package.
+Show a saved Plan and how far each Step has gone.
 
 ## Install
 
