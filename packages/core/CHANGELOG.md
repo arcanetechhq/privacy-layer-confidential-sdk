@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+### Patch Changes
+
+- e2f1829: Record nested transaction stages for preparation, proving, signing, and submission.
+
 ## 1.0.1
 
 ### Patch Changes
