@@ -1,3 +1,4 @@
+import { measureStage } from '@arcanetech/privacy-sdk-core';
 import type { StellarPreparedOperation } from '../../types.js';
 import type {
   StellarTransactEnvironment,
@@ -15,6 +16,25 @@ import {
 import { serializeEphemeralKeyString } from '../encoding/ephemeral-key.js';
 import { readTransferFromPrivateAddress } from '../transfer-source/index.js';
 import { quoteFeeOutputForPrepared } from '../fees/quote-fee-output-for-prepared.js';
+
+async function readDualTransferSpendContext(
+  input: Parameters<typeof buildSpendProofContextAtExecute>[0],
+  secondaryRecord: StellarPreparedOperation['consumedRecords'][number],
+) {
+  const context = await buildSpendProofContextAtExecute(input);
+  const secondary = await readCoinEphemeralForRecord({
+    record: secondaryRecord,
+    environment: input.environment,
+    walletPublicKey: context.walletPublicKey,
+    commitments: context.commitments,
+  });
+  const feeOutput = await quoteFeeOutputForPrepared({
+    prepared: input.prepared,
+    environment: input.environment,
+    tokenAddress: context.tokenAddress,
+  });
+  return { context, secondary, feeOutput };
+}
 
 function readChangeRecipient(
   input: { prepared: StellarPreparedOperation },
@@ -46,31 +66,36 @@ async function buildSingleTransferProofAtExecute(input: {
   escrowSend?: TransferEscrowSend;
   escrowClaimantLimbs?: TransferEscrowClaimantLimbs;
 }) {
-  const context = await buildSpendProofContextAtExecute(input);
-  const feeOutput = await quoteFeeOutputForPrepared({
-    prepared: input.prepared,
-    environment: input.environment,
-    tokenAddress: context.tokenAddress,
+  const { context, feeOutput } = await measureStage('spendContext', async () => {
+    const context = await buildSpendProofContextAtExecute(input);
+    const feeOutput = await quoteFeeOutputForPrepared({
+      prepared: input.prepared,
+      environment: input.environment,
+      tokenAddress: context.tokenAddress,
+    });
+    return { context, feeOutput };
   });
   const changeStroops =
     BigInt(context.coin.value) -
     input.prepared.intent.amount -
     (feeOutput?.requiredFee ?? 0n);
-  const proof = await prepareConfidentialTransferProof({
-    coin: context.coin,
-    state: context.merkleState,
-    senderPrivKeyScalarHex: context.senderPrivKeyScalarHex,
-    depositorEphemeralKey: serializeEphemeralKeyString({
-      xHex: context.ephemeral.xHex,
-      yHex: context.ephemeral.yHex,
+  const proof = await measureStage('prove', () =>
+    prepareConfidentialTransferProof({
+      coin: context.coin,
+      state: context.merkleState,
+      senderPrivKeyScalarHex: context.senderPrivKeyScalarHex,
+      depositorEphemeralKey: serializeEphemeralKeyString({
+        xHex: context.ephemeral.xHex,
+        yHex: context.ephemeral.yHex,
+      }),
+      transferStroops: input.prepared.intent.amount,
+      recipientPrivateAddressStpl1: context.recipientPrivateAddressStpl1,
+      selfPrivateAddressStpl1ForChange: readChangeRecipient(input, changeStroops),
+      tokenAddress: context.tokenAddress,
+      ...proofEscrowFields(input),
+      ...(feeOutput ? { feeOutput } : {}),
     }),
-    transferStroops: input.prepared.intent.amount,
-    recipientPrivateAddressStpl1: context.recipientPrivateAddressStpl1,
-    selfPrivateAddressStpl1ForChange: readChangeRecipient(input, changeStroops),
-    tokenAddress: context.tokenAddress,
-    ...proofEscrowFields(input),
-    ...(feeOutput ? { feeOutput } : {}),
-  });
+  );
   return { context, proof };
 }
 
@@ -85,41 +110,34 @@ async function buildDualTransferProofAtExecute(input: {
   if (!primaryRecord || !secondaryRecord) {
     throw new Error('Dual transfer execution requires two private input records.');
   }
-  const context = await buildSpendProofContextAtExecute(input);
-  const secondary = await readCoinEphemeralForRecord({
-    record: secondaryRecord,
-    environment: input.environment,
-    walletPublicKey: context.walletPublicKey,
-    commitments: context.commitments,
-  });
+  const { context, secondary, feeOutput } = await measureStage('spendContext', () =>
+    readDualTransferSpendContext(input, secondaryRecord),
+  );
   const totalNotes = BigInt(context.coin.value) + BigInt(secondary.coin.value);
-  const feeOutput = await quoteFeeOutputForPrepared({
-    prepared: input.prepared,
-    environment: input.environment,
-    tokenAddress: context.tokenAddress,
-  });
   const changeStroops =
     totalNotes - input.prepared.intent.amount - (feeOutput?.requiredFee ?? 0n);
-  const proof = await prepareConfidentialTransferProofDual({
-    coinA: context.coin,
-    coinB: secondary.coin,
-    state: context.merkleState,
-    senderPrivKeyScalarHex: context.senderPrivKeyScalarHex,
-    ephemeralAKey: serializeEphemeralKeyString({
-      xHex: context.ephemeral.xHex,
-      yHex: context.ephemeral.yHex,
+  const proof = await measureStage('prove', () =>
+    prepareConfidentialTransferProofDual({
+      coinA: context.coin,
+      coinB: secondary.coin,
+      state: context.merkleState,
+      senderPrivKeyScalarHex: context.senderPrivKeyScalarHex,
+      ephemeralAKey: serializeEphemeralKeyString({
+        xHex: context.ephemeral.xHex,
+        yHex: context.ephemeral.yHex,
+      }),
+      ephemeralBKey: serializeEphemeralKeyString({
+        xHex: secondary.ephemeral.xHex,
+        yHex: secondary.ephemeral.yHex,
+      }),
+      transferStroops: input.prepared.intent.amount,
+      recipientPrivateAddressStpl1: context.recipientPrivateAddressStpl1,
+      selfPrivateAddressStpl1ForChange: readChangeRecipient(input, changeStroops),
+      tokenAddress: context.tokenAddress,
+      ...proofEscrowFields(input),
+      ...(feeOutput ? { feeOutput } : {}),
     }),
-    ephemeralBKey: serializeEphemeralKeyString({
-      xHex: secondary.ephemeral.xHex,
-      yHex: secondary.ephemeral.yHex,
-    }),
-    transferStroops: input.prepared.intent.amount,
-    recipientPrivateAddressStpl1: context.recipientPrivateAddressStpl1,
-    selfPrivateAddressStpl1ForChange: readChangeRecipient(input, changeStroops),
-    tokenAddress: context.tokenAddress,
-    ...proofEscrowFields(input),
-    ...(feeOutput ? { feeOutput } : {}),
-  });
+  );
   return { context, proof };
 }
 

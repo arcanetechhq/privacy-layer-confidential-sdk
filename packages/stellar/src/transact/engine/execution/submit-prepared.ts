@@ -5,6 +5,7 @@ import {
   emitOperationEvent,
   executionError,
   isPrivacySdkError,
+  measureStage,
   userRejectedError,
 } from '@arcanetech/privacy-sdk-core';
 import type {
@@ -39,8 +40,10 @@ export async function submitPreparedOperation(
 
   try {
     emitPreSubmissionStages(input.options, eventId);
-    const signedPayload = await signSubmissionPayload(input.wallet, input.prepared);
-    const receipt = await submitAndConfirm(input, eventId, signedPayload);
+    const receipt = await measureStage('submit', async () => {
+      const signedPayload = await signSubmissionPayload(input.wallet, input.prepared);
+      return submitAndConfirm(input, eventId, signedPayload);
+    });
     try {
       await commitStorageChanges(input, eventId, receipt);
     } catch (error) {
@@ -68,7 +71,9 @@ async function signSubmissionPayload(
   prepared: StellarPreparedOperation,
 ): Promise<StellarSubmissionPayload> {
   try {
-    return await wallet.signTransactionPayload(prepared.submissionPayload);
+    return await measureStage('sign', () =>
+      wallet.signTransactionPayload(prepared.submissionPayload),
+    );
   } catch (error) {
     throw userRejectedError(
       error instanceof Error ? error.message : 'Wallet rejected the transaction.',

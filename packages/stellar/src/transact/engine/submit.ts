@@ -1,3 +1,4 @@
+import { measureStage } from '@arcanetech/privacy-sdk-core';
 import type { StellarPreparedOperation } from '../../types.js';
 import { readPoolClientFactory } from '../../contracts/contract-context.js';
 import type { StellarTransactEnvironment } from '../environment/types.js';
@@ -41,38 +42,67 @@ async function submitPreparedDeposit(
   ) {
     throw new Error('Prepared deposit is missing transact artifacts.');
   }
-  const poolClient = readPoolClientFactory(environment)({
-    contractId: environment.network.poolContract,
+  return submitGuardedDeposit({
+    environment,
+    artifacts,
+    proofHex: artifacts.proofHex,
+    publicHex: artifacts.publicHex,
     walletPublicKey: artifacts.walletPublicKey,
-    networkPassphrase: environment.network.networkPassphrase,
-    sorobanRpcUrl: environment.network.rpcUrl,
   });
-  const nonce = transactNonceFromArtifacts(artifacts, environment);
-  const approval = await requestKytPassageForPoolInteraction({
-    owner: artifacts.walletPublicKey,
-    poolContract: environment.network.poolContract,
-    proofHex: artifacts.proofHex,
-    publicHex: artifacts.publicHex,
-    ...optionalInspectCiphertext(artifacts),
-    ...(artifacts.zkConfigNonce === undefined
+}
+
+async function submitGuardedDeposit(input: {
+  environment: StellarTransactEnvironment;
+  artifacts: NonNullable<StellarPreparedOperation['transactArtifacts']>;
+  proofHex: string;
+  publicHex: string;
+  walletPublicKey: string;
+}): Promise<string> {
+  const poolClient = readPoolClientFactory(input.environment)({
+    contractId: input.environment.network.poolContract,
+    walletPublicKey: input.walletPublicKey,
+    networkPassphrase: input.environment.network.networkPassphrase,
+    sorobanRpcUrl: input.environment.network.rpcUrl,
+  });
+  const approval = await measureStage('kyt', () => requestDepositKytPassage(input));
+  return measureStage('chain', () =>
+    submitPoolTransact({
+      contractClient: poolClient,
+      contractId: input.environment.network.poolContract,
+      from: input.walletPublicKey,
+      nonce: transactNonceFromArtifacts(input.artifacts, input.environment),
+      proofHex: input.proofHex,
+      publicHex: input.publicHex,
+      ...(input.artifacts.ciphertextHex
+        ? { ciphertextHex: input.artifacts.ciphertextHex }
+        : {}),
+      approval,
+      networkPassphrase: input.environment.network.networkPassphrase,
+      sorobanRpcUrl: input.environment.network.rpcUrl,
+      transactEnvironment: input.environment,
+    }),
+  );
+}
+
+function requestDepositKytPassage(input: {
+  environment: StellarTransactEnvironment;
+  artifacts: NonNullable<StellarPreparedOperation['transactArtifacts']>;
+  proofHex: string;
+  publicHex: string;
+  walletPublicKey: string;
+}) {
+  return requestKytPassageForPoolInteraction({
+    owner: input.walletPublicKey,
+    poolContract: input.environment.network.poolContract,
+    proofHex: input.proofHex,
+    publicHex: input.publicHex,
+    ...optionalInspectCiphertext(input.artifacts),
+    ...(input.artifacts.zkConfigNonce === undefined
       ? {}
-      : { zkConfigNonce: artifacts.zkConfigNonce }),
-    networkPassphrase: environment.network.networkPassphrase,
-    sorobanRpcUrl: environment.network.rpcUrl,
-    transactEnvironment: environment,
-  });
-  return submitPoolTransact({
-    contractClient: poolClient,
-    contractId: environment.network.poolContract,
-    from: artifacts.walletPublicKey,
-    nonce,
-    proofHex: artifacts.proofHex,
-    publicHex: artifacts.publicHex,
-    ...(artifacts.ciphertextHex ? { ciphertextHex: artifacts.ciphertextHex } : {}),
-    approval,
-    networkPassphrase: environment.network.networkPassphrase,
-    sorobanRpcUrl: environment.network.rpcUrl,
-    transactEnvironment: environment,
+      : { zkConfigNonce: input.artifacts.zkConfigNonce }),
+    networkPassphrase: input.environment.network.networkPassphrase,
+    sorobanRpcUrl: input.environment.network.rpcUrl,
+    transactEnvironment: input.environment,
   });
 }
 
