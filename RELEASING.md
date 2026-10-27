@@ -10,7 +10,7 @@ Developer steps for a normal package publish are in the README. This file is for
 | `release/v0` | 0 | `release-v0` |
 | `release/v1` | 1 | `release-v1` |
 
-`release/v0` is the maintenance line for the packages that were published from `development`. `@arcanetech/privacy-sdk-stellar` on that branch depends on `@arcanetech/stellar-privacy-pool-zk-sdk` at `>=0.13.0 <1.0.0`. `scripts/check-majors.mjs` rejects a range that includes `1.0.0` or above. New publishes from `release/v0` use the `release-v0` dist-tag only. They do not move `latest` or the old `sdk-v0` tag. npm 11 rejects a dist-tag named `v0` because that name is a semver range.
+`release/v0` is the maintenance line for the packages that were published from `development`. `@arcanetech/privacy-sdk-stellar` on that branch depends on `@arcanetech/stellar-privacy-pool-zk-sdk` at `>=0.14.0 <1.0.0`. `scripts/check-majors.mjs` rejects a range that includes `1.0.0` or above. New publishes from `release/v0` use the `release-v0` dist-tag only. They do not move `latest` or the old `sdk-v0` tag. npm 11 rejects a dist-tag named `v0` because that name is a semver range.
 
 `release/v1` is cut from `v1`. Every public package on that branch is `1.0.0`. The zk-sdk range stays at the range committed on `v1` (`>=1.0.0 <2.0.0`). Publishes use the `release-v1` dist-tag only. npm 11 rejects a dist-tag named `v1` because that name is a semver range.
 
