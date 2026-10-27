@@ -1,6 +1,6 @@
 {
   "name": "@arcanetech/privacy-sdk-data-layer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Private-data HTTP client that checks caller-supplied schemas before returning records or completions",
   "type": "module",
   "main": "./dist/index.js",
@@ -31,7 +31,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@arcanetech/privacy-sdk-core": "0.4.0",
+    "@arcanetech/privacy-sdk-core": "0.5.0",
     "zod": "^3.24.2"
   }
 }

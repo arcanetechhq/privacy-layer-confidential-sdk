@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.3
+
+### Patch Changes
+
+- 0048f17: Record nested transaction stages for preparation, proving, signing, and submission.
+- Updated dependencies [a72b3bf]
+- Updated dependencies [0048f17]
+  - @arcanetech/privacy-sdk-core@0.5.0
+
 ## 0.8.2
 
 ### Patch Changes
