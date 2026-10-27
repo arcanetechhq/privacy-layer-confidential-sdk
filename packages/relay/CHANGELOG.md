@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1
+
+### Patch Changes
+
+- e2f1829: Record nested transaction stages for preparation, proving, signing, and submission.
+- Updated dependencies [e2f1829]
+  - @arcanetech/privacy-sdk-core@1.0.2
+
 ## 1.0.0
 
 ### Major Changes
