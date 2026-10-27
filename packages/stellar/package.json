@@ -49,7 +49,7 @@
   },
   "dependencies": {
     "@arcanetech/privacy-sdk-core": "0.4.0",
-    "@arcanetech/stellar-privacy-pool-zk-sdk": ">=0.13.0 <1.0.0",
+    "@arcanetech/stellar-privacy-pool-zk-sdk": ">=0.14.0 <1.0.0",
     "@stellar/stellar-sdk": "^16.0.1",
     "buffer": "^6.0.3",
     "contract": "file:./generated/contract",
