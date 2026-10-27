@@ -12,7 +12,7 @@ Developer steps for a normal package publish are in the README. This file is for
 
 `release/v0` is the maintenance line for the packages that were published from `development`. `@arcanetech/privacy-sdk-stellar` on that branch depends on `@arcanetech/stellar-privacy-pool-zk-sdk` at `>=0.11.0 <1.0.0`. `scripts/check-majors.mjs` rejects a range that includes `1.0.0` or above. New publishes from `release/v0` use the `release-v0` dist-tag only. They do not move `latest` or the old `sdk-v0` tag.
 
-`release/v1` is cut from `v1`. Every public package on that branch is `1.0.0`. `@arcanetech/privacy-sdk-stellar` on `main` and `release/v1` depends on `@arcanetech/stellar-privacy-pool-zk-sdk` at `>=1.0.0-rc.0 <2.0.0`. That range installs the published `1.0.0-rc.0`, which samples a high-entropy escrow nonce. `>=1.0.0 <2.0.0` does not match that release candidate, so it cannot be installed yet. Publishes from `release/v1` use the `release-v1` dist-tag only.
+`release/v1` is cut from `v1`. Every public package on that branch is `1.0.0`. `@arcanetech/privacy-sdk-stellar` on `main` and `release/v1` depends on `@arcanetech/stellar-privacy-pool-zk-sdk` at `>=1.0.0-rc.1 <2.0.0`. That range installs the published `1.0.0-rc.1`, which samples a high-entropy escrow nonce. `>=1.0.0 <2.0.0` does not match that release candidate, so it cannot be installed yet. Publishes from `release/v1` use the `release-v1` dist-tag only.
 
 npm 11 refuses a dist-tag that is a valid semver range, so `v0` and `v1` cannot be tags. The release lines use `release-v0` and `release-v1` instead. Neither tag moves `latest`.
 
