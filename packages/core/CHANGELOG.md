@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- a72b3bf: Add the authorization envelope that the 0.x private-data client checks before a request.
+
+### Patch Changes
+
+- 0048f17: Record nested transaction stages for preparation, proving, signing, and submission.
+
 ## 0.4.0
 
 ### Minor Changes
