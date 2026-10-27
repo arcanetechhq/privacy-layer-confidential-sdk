@@ -1,4 +1,4 @@
-import type { WithdrawIntent } from '@arcanetech/privacy-sdk-core';
+import { measureStage, type WithdrawIntent } from '@arcanetech/privacy-sdk-core';
 import type {
   StellarAddress,
   StellarAssetId,
@@ -66,34 +66,66 @@ async function finalizeSingleWithdrawAtExecute(
   poolService: PrivacyPoolService,
   withdrawFrom: string,
 ) {
-  const context = await buildSpendProofContextAtExecute({
-    prepared,
-    environment,
-    recipientPrivateAddressStpl1: withdrawFrom,
+  const { context, feeFields } = await measureStage('spendContext', async () => {
+    const context = await buildSpendProofContextAtExecute({
+      prepared,
+      environment,
+      recipientPrivateAddressStpl1: withdrawFrom,
+    });
+    const feeFields = await withdrawFeeProofFields({
+      prepared,
+      environment,
+      tokenAddress: context.tokenAddress,
+      available: BigInt(context.coin.value),
+      withdrawFrom,
+    });
+    return { context, feeFields };
   });
-  const feeFields = await withdrawFeeProofFields({
-    prepared,
-    environment,
-    tokenAddress: context.tokenAddress,
-    available: BigInt(context.coin.value),
-    withdrawFrom,
-  });
-  const proof = await poolService.prepareWithdrawTransactProof({
-    coin: context.coin,
-    state: context.merkleState,
-    destinationStellarAddress: prepared.intent.to,
-    privKeyScalarHex: context.senderPrivKeyScalarHex,
-    depositorEphemeralKey: serializeEphemeralKeyString({
-      xHex: context.ephemeral.xHex,
-      yHex: context.ephemeral.yHex,
+  const proof = await measureStage('prove', () =>
+    poolService.prepareWithdrawTransactProof({
+      coin: context.coin,
+      state: context.merkleState,
+      destinationStellarAddress: prepared.intent.to,
+      privKeyScalarHex: context.senderPrivKeyScalarHex,
+      depositorEphemeralKey: serializeEphemeralKeyString({
+        xHex: context.ephemeral.xHex,
+        yHex: context.ephemeral.yHex,
+      }),
+      withdrawAmountStroops: prepared.intent.amount,
+      changePrivateAddressStpl1: feeFields.changePrivateAddressStpl1,
+      tokenAddress: context.tokenAddress,
+      ...(feeFields.feeOutput ? { feeOutput: feeFields.feeOutput } : {}),
     }),
-    withdrawAmountStroops: prepared.intent.amount,
-    changePrivateAddressStpl1: feeFields.changePrivateAddressStpl1,
-    tokenAddress: context.tokenAddress,
-    ...(feeFields.feeOutput ? { feeOutput: feeFields.feeOutput } : {}),
-  });
+  );
   enrichWithdrawOutputRecords(prepared, proof);
   return buildWithdrawFinalizeArtifacts(proof, context, environment);
+}
+
+async function readDualWithdrawSpendContext(input: {
+  prepared: StellarPreparedOperation;
+  environment: StellarTransactEnvironment;
+  secondaryRecord: StellarPreparedOperation['consumedRecords'][number];
+  withdrawFrom: string;
+}) {
+  const context = await buildSpendProofContextAtExecute({
+    prepared: input.prepared,
+    environment: input.environment,
+    recipientPrivateAddressStpl1: input.withdrawFrom,
+  });
+  const secondary = await readCoinEphemeralForRecord({
+    record: input.secondaryRecord,
+    environment: input.environment,
+    walletPublicKey: context.walletPublicKey,
+    commitments: context.commitments,
+  });
+  const feeFields = await withdrawFeeProofFields({
+    prepared: input.prepared,
+    environment: input.environment,
+    tokenAddress: context.tokenAddress,
+    available: BigInt(context.coin.value) + BigInt(secondary.coin.value),
+    withdrawFrom: input.withdrawFrom,
+  });
+  return { context, secondary, feeFields };
 }
 
 function dualWithdrawEphemeralKeys(input: {
@@ -122,36 +154,28 @@ async function finalizeDualWithdrawAtExecute(
   if (!secondaryRecord) {
     throw new Error('Dual withdraw execution requires two private input records.');
   }
-  const context = await buildSpendProofContextAtExecute({
-    prepared,
-    environment,
-    recipientPrivateAddressStpl1: withdrawFrom,
-  });
-  const secondary = await readCoinEphemeralForRecord({
-    record: secondaryRecord,
-    environment,
-    walletPublicKey: context.walletPublicKey,
-    commitments: context.commitments,
-  });
-  const feeFields = await withdrawFeeProofFields({
-    prepared,
-    environment,
-    tokenAddress: context.tokenAddress,
-    available: BigInt(context.coin.value) + BigInt(secondary.coin.value),
-    withdrawFrom,
-  });
-  const proof = await poolService.prepareWithdrawTransactProofDual({
-    coinA: context.coin,
-    coinB: secondary.coin,
-    state: context.merkleState,
-    destinationStellarAddress: prepared.intent.to,
-    privKeyScalarHex: context.senderPrivKeyScalarHex,
-    ...dualWithdrawEphemeralKeys({ context, secondary }),
-    withdrawAmountStroops: prepared.intent.amount,
-    changePrivateAddressStpl1: feeFields.changePrivateAddressStpl1,
-    tokenAddress: context.tokenAddress,
-    ...(feeFields.feeOutput ? { feeOutput: feeFields.feeOutput } : {}),
-  });
+  const { context, secondary, feeFields } = await measureStage('spendContext', () =>
+    readDualWithdrawSpendContext({
+      prepared,
+      environment,
+      secondaryRecord,
+      withdrawFrom,
+    }),
+  );
+  const proof = await measureStage('prove', () =>
+    poolService.prepareWithdrawTransactProofDual({
+      coinA: context.coin,
+      coinB: secondary.coin,
+      state: context.merkleState,
+      destinationStellarAddress: prepared.intent.to,
+      privKeyScalarHex: context.senderPrivKeyScalarHex,
+      ...dualWithdrawEphemeralKeys({ context, secondary }),
+      withdrawAmountStroops: prepared.intent.amount,
+      changePrivateAddressStpl1: feeFields.changePrivateAddressStpl1,
+      tokenAddress: context.tokenAddress,
+      ...(feeFields.feeOutput ? { feeOutput: feeFields.feeOutput } : {}),
+    }),
+  );
   enrichWithdrawOutputRecords(prepared, proof);
   return buildWithdrawFinalizeArtifacts(proof, context, environment);
 }
@@ -201,15 +225,17 @@ export async function finalizeSpendOperationAtExecute(
   if (prepared.transactArtifacts?.proofHex) {
     return prepared;
   }
-  const artifacts =
-    prepared.kind === 'transfer'
-      ? await finalizeTransferAtExecute(prepared, environment)
-      : await finalizeWithdrawAtExecute(prepared, environment, poolService);
-  return {
-    ...prepared,
-    transactArtifacts: {
-      ...prepared.transactArtifacts,
-      ...artifacts,
-    },
-  };
+  return measureStage('prepare', async () => {
+    const artifacts =
+      prepared.kind === 'transfer'
+        ? await finalizeTransferAtExecute(prepared, environment)
+        : await finalizeWithdrawAtExecute(prepared, environment, poolService);
+    return {
+      ...prepared,
+      transactArtifacts: {
+        ...prepared.transactArtifacts,
+        ...artifacts,
+      },
+    };
+  });
 }

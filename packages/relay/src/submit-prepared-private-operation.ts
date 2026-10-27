@@ -1,3 +1,4 @@
+import { measureStage } from '@arcanetech/privacy-sdk-core';
 import { completeSucceededOperation } from './complete-succeeded-operation.js';
 import { toSubmitResult } from './complete-succeeded-operation.js';
 import { isRelayConfigured, requireRelayApi } from './relay-config.js';
@@ -109,7 +110,7 @@ async function createRelayRequest(input: {
   }
 }
 
-function shouldSubmitDirect(input: {
+export function shouldSubmitDirect(input: {
   ports: ProtocolRelayPorts;
   operation: NewPrivateOperation;
 }): boolean {
@@ -140,8 +141,10 @@ export async function submitPreparedPrivateOperation(input: {
       operation: prepared,
     });
   }
-  return createRelayRequest({
-    ports: input.ports,
-    operation: prepared,
-  });
+  return measureStage('relay', () =>
+    createRelayRequest({
+      ports: input.ports,
+      operation: prepared,
+    }),
+  );
 }

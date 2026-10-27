@@ -47,6 +47,7 @@ export {
   createOperationEventId,
   emitOperationEvent,
 } from './events.js';
+export { measureStage, TX_BENCH_PREFIX } from './measure-stage.js';
 
 export type {
   NetworkAdapter,

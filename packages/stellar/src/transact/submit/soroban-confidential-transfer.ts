@@ -1,3 +1,4 @@
+import { measureStage } from '@arcanetech/privacy-sdk-core';
 import { readPoolClientFactory } from '../../contracts/contract-context.js';
 import { requestKytPassageForPoolInteraction } from '../kyt/passage-inspect.js';
 import type { KytApplicationIdHints } from '../pool/proof-types.js';
@@ -34,7 +35,26 @@ export async function submitSorobanConfidentialTransfer(
       : { zkConfigNonce: input.zkConfigNonce },
     input.transactEnvironment,
   );
-  const approval = await requestKytPassageForPoolInteraction({
+  const approval = await measureStage('kyt', () => requestTransferKytPassage(input));
+  return measureStage('chain', () =>
+    submitPoolTransact({
+      contractClient: poolClient,
+      contractId: input.contractId,
+      from: input.walletPublicKey,
+      nonce,
+      proofHex: input.proofHex,
+      publicHex: input.publicHex,
+      ...(input.ciphertextHex ? { ciphertextHex: input.ciphertextHex } : {}),
+      approval,
+      networkPassphrase: input.networkPassphrase,
+      sorobanRpcUrl: input.sorobanRpcUrl,
+      transactEnvironment: input.transactEnvironment,
+    }),
+  );
+}
+
+function requestTransferKytPassage(input: SubmitSorobanConfidentialTransferInput) {
+  return requestKytPassageForPoolInteraction({
     owner: input.walletPublicKey,
     poolContract: input.contractId,
     proofHex: input.proofHex,
@@ -49,19 +69,6 @@ export async function submitSorobanConfidentialTransfer(
     ...(input.zkConfigNonce === undefined
       ? {}
       : { zkConfigNonce: input.zkConfigNonce }),
-    networkPassphrase: input.networkPassphrase,
-    sorobanRpcUrl: input.sorobanRpcUrl,
-    transactEnvironment: input.transactEnvironment,
-  });
-  return submitPoolTransact({
-    contractClient: poolClient,
-    contractId: input.contractId,
-    from: input.walletPublicKey,
-    nonce,
-    proofHex: input.proofHex,
-    publicHex: input.publicHex,
-    ...(input.ciphertextHex ? { ciphertextHex: input.ciphertextHex } : {}),
-    approval,
     networkPassphrase: input.networkPassphrase,
     sorobanRpcUrl: input.sorobanRpcUrl,
     transactEnvironment: input.transactEnvironment,

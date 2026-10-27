@@ -60,6 +60,8 @@ Execution emits stable user-facing stages:
 
 `validation`, `stateRead`, `authorization`, `preparation`, `policyCheck`, `submission`, `confirmation`, `storageCommit`
 
+`measureStage` writes nested User Timing measures under the `arcane-tx:` prefix. A parent measure stays open while its child measures run. Read them from `performance.getEntriesByType('measure')`.
+
 ## Related Docs
 
 - [Root README](../../README.md)

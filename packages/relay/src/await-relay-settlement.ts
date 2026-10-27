@@ -1,7 +1,11 @@
+import { measureStage } from '@arcanetech/privacy-sdk-core';
 import { pollPendingOperation } from './poll-pending-operation.js';
 import { isTerminalRelayStatus } from './poll-pending-operation.js';
 import { toSubmitResult } from './complete-succeeded-operation.js';
-import { submitPreparedPrivateOperation } from './submit-prepared-private-operation.js';
+import {
+  shouldSubmitDirect,
+  submitPreparedPrivateOperation,
+} from './submit-prepared-private-operation.js';
 import {
   PENDING_OPERATION_PHASE,
   type NewPrivateOperation,
@@ -135,17 +139,31 @@ export async function submitAndAwaitPrivateOperation(input: {
   pollIntervalMs?: number;
   maxAttempts?: number;
 }): Promise<SubmitPrivateOperationResult> {
+  if (shouldSubmitDirect(input)) {
+    return submitPreparedPrivateOperation(input);
+  }
+  return measureStage('submit', () => settleThroughRelay(input));
+}
+
+async function settleThroughRelay(input: {
+  ports: ProtocolRelayPorts;
+  operation: NewPrivateOperation;
+  pollIntervalMs?: number;
+  maxAttempts?: number;
+}): Promise<SubmitPrivateOperationResult> {
   const submitted = await submitPreparedPrivateOperation(input);
   if (submitted.outcome !== PENDING_OPERATION_PHASE.relayAccepted) {
     return submitted;
   }
-  return awaitRelaySettlement({
-    ports: input.ports,
-    walletPublicKey: input.operation.walletPublicKey,
-    operationId: input.operation.id,
-    ...(input.pollIntervalMs === undefined
-      ? {}
-      : { pollIntervalMs: input.pollIntervalMs }),
-    ...(input.maxAttempts === undefined ? {} : { maxAttempts: input.maxAttempts }),
-  });
+  return measureStage('settlement', () =>
+    awaitRelaySettlement({
+      ports: input.ports,
+      walletPublicKey: input.operation.walletPublicKey,
+      operationId: input.operation.id,
+      ...(input.pollIntervalMs === undefined
+        ? {}
+        : { pollIntervalMs: input.pollIntervalMs }),
+      ...(input.maxAttempts === undefined ? {} : { maxAttempts: input.maxAttempts }),
+    }),
+  );
 }
