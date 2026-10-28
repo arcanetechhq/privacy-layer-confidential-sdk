@@ -22,6 +22,7 @@ flowchart BT
   DataLayer["@arcanetech/privacy-sdk-data-layer"]
   Relay["@arcanetech/privacy-sdk-relay"]
   Plan["@arcanetech/privacy-sdk-automatization-plan"]
+  Service["@arcanetech/privacy-sdk-automatization-service"]
   Client["@arcanetech/privacy-sdk-automatization-client"]
   Core["@arcanetech/privacy-sdk-core"]
   Memory["@arcanetech/privacy-sdk-state-memory"]
@@ -31,8 +32,10 @@ flowchart BT
   App --> DataLayer
   App --> Relay
   App --> Plan
+  App --> Service
   App --> Client
   Client --> Plan
+  Service --> Plan
   App --> Memory
   App --> Redux
   Stellar --> Core
@@ -42,7 +45,8 @@ flowchart BT
 ```
 
 - **Plan** — a Plan for one asset. Check that it is funded, which Step is underfunded, and whether a Step is executed or blocked. You pass a presence report. This package does not query a chain.
-- **Plan progress** — show a saved Plan. List each Row. List each Payout account. List each Payout's public amount. List each pinned note. List each Step's Free tokens. You pass which pinned nullifiers are consumed. You pass which pinned commitments are in the pool tree. The package marks each Step executed. The package marks each Step blocked.
+- **Plan progress** — show a saved Plan. Call `planProgress`, `readPinnedPresence`, and `waitingDeposit`. Call `createPlanClient` to compose, revise, and confirm through an automation service. Call `createSecretDepositSigner` or pass your own signer. Call `createSorobanPoolView` when you read the pool.
+- **Plan service** — compose a Plan and run its Steps. Call `compose`, `reviseFreeTokens`, `insertDeposit`, `moveDepositAmount`, `replaceStepInterval`, `confirm`, `depositToSign`, `read`, `authorizeDeposit`, `runDueSteps`, and `submitNextStep`. Pass Fee quote, proof, inspect, and pool submit ports, or build them for Stellar from the `/stellar` entry. `createMemoryPlanStore` keeps Plans in memory, and `composePlanStore` combines your own store roles.
 - **Core** — intents, prepare/execute lifecycle, errors, progress events, and the private-data authorization envelope.
 - **Private data** — HTTP client for private records. You pass the schemas. `find` returns records only after your schema accepts the payload. Challenge methods stop before a request when you omit the completion schema.
 - **Relay** — Protocol Relay runtime: admission, polling, retry, and fallback over caller-supplied ports. It owns statuses, reason codes, and package JSON serialization, follows a caller-supplied submission path, and never inspects opaque package payloads or deposit amounts. Relaying is enabled only when the caller sets `relayConfig.origin`; otherwise the runtime Direct-submits and does not contact a relayer. Settlement polling is bounded. The package does not depend on Stellar or Soroban.
@@ -57,9 +61,10 @@ Internal transitive dependencies are not part of the public integration surface.
 
 | Import                                                                                         | Purpose                                                                                                                 |
 | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `@arcanetech/privacy-sdk-automatization-client`                                                | Plan progress. Rows, Payouts, pinned notes, Free tokens, executed and blocked Steps                                     |
+| `@arcanetech/privacy-sdk-automatization-client`                                                | `planProgress`, `readPinnedPresence`, `waitingDeposit`, `createPlanClient`, `createSorobanPoolView`                     |
 | `@arcanetech/privacy-sdk-automatization-plan`                                                  | Plan document. Funded, underfunded, executed, and blocked checks                                                        |
-| `@arcanetech/privacy-sdk-core`                                                                 | Intents, lifecycle helpers, error types, progress events, authorization envelope                                        |
+| `@arcanetech/privacy-sdk-automatization-service`                                               | `compose`, `confirm`, `depositToSign`, `runDueSteps`, `createMemoryPlanStore`, `composePlanStore`. Stellar ports from `/stellar`, an in-memory pool from `/testing` |
+| `@arcanetech/privacy-sdk-core`                                                                 | Intents, lifecycle helpers, error types, progress events, `measureStage` timings, authorization envelope                |
 | `@arcanetech/privacy-sdk-data-layer`                                                           | Private-record HTTP client. Checks caller-supplied schemas before returning                                             |
 | [`@arcanetech/privacy-sdk-relay`](https://www.npmjs.com/package/@arcanetech/privacy-sdk-relay) | Protocol relay runtime (ports, polling, retry, fallback) and the wire vocabulary (statuses, reason codes, package JSON) |
 | `@arcanetech/privacy-sdk-state-memory`                                                         | In-memory state adapter for prototypes and tests                                                                        |
@@ -117,188 +122,23 @@ Supply the record schema, data type, and protocol for your records. After you de
 
 ## Check a Plan {#plan-document}
 
-Decide whether a Plan is funded, which Step is underfunded, and whether a Step is executed or blocked. Install the package.
+Decide whether a Plan is funded, which Step is underfunded, and whether a Step is executed or blocked. Install `@arcanetech/privacy-sdk-automatization-plan` and pass the Plan plus a presence report. Chain reads stay in that report.
 
 ```bash
 npm install @arcanetech/privacy-sdk-automatization-plan
 ```
 
-Build one Deposit and one Payout. Read each pinned note's plaintext, commitment, and nullifier hash. Read Free tokens and the interval from each Step. Read the account and public amount from the Payout. Set `transactionId` only after that Step is submitted.
-
-```ts
-import type { Plan } from '@arcanetech/privacy-sdk-automatization-plan';
-
-const remainder = {
-  plaintext: { amount: 8n, accumulator: 'pin-transfer' },
-  commitment: 'commitment-remainder',
-  nullifierHash: 'nullifier-remainder',
-};
-
-const afterTransfer = {
-  plaintext: { amount: 7n, accumulator: 'pin-withdrawal' },
-  commitment: 'commitment-after-transfer',
-  nullifierHash: 'nullifier-after-transfer',
-};
-
-const plan: Plan = {
-  rows: [
-    {
-      kind: 'deposit',
-      amount: 10n,
-      step: {
-        freeTokens: 2n,
-        interval: 0n,
-        pinnedInputs: [],
-        pinnedOutputs: [remainder],
-        transactionId: 'tx-deposit',
-      },
-    },
-    {
-      kind: 'payout',
-      account: 'bob-account',
-      amount: 6n,
-      transfer: {
-        freeTokens: 1n,
-        interval: 0n,
-        pinnedInputs: [remainder],
-        pinnedOutputs: [afterTransfer],
-      },
-      withdrawal: {
-        freeTokens: 1n,
-        interval: 0n,
-        pinnedInputs: [afterTransfer],
-        pinnedOutputs: [],
-      },
-    },
-  ],
-};
-```
-
-Call `isFundedPlan` and `underfundedSteps` on that Plan. Call `isExecutedStep` and `isBlockedStep` with a report of which pinned nullifiers are consumed and which pinned commitments are in the pool tree.
-
-```ts
-import {
-  isBlockedStep,
-  isExecutedStep,
-  isFundedPlan,
-  underfundedSteps,
-  type PinnedNotePresence,
-} from '@arcanetech/privacy-sdk-automatization-plan';
-
-const payout = plan.rows[1];
-if (payout?.kind !== 'payout') {
-  throw new Error('expected a Payout');
-}
-
-const presence: PinnedNotePresence = {
-  consumedNullifierHashes: ['nullifier-remainder'],
-  outputCommitmentsInPoolTree: ['commitment-after-transfer'],
-};
-
-const funded = isFundedPlan(plan);
-const shortfalls = underfundedSteps(plan);
-const executed = isExecutedStep(payout.transfer, presence);
-const blocked = isBlockedStep(payout.transfer, presence);
-```
-
-`funded` is true because the Deposit of 10 equals the Payout of 6 plus Free tokens 2, 1, and 1. `shortfalls` is empty: the transfer spends the Remainder the Deposit left, and the withdrawal spends the note that transfer left. `executed` is true for that transfer. `blocked` is false.
-
-The note plaintext stores the amount and the accumulator. It does not store an owner scalar. Fee notes and Unspent notes are not stored on the Plan and are not part of the executed check.
+See [Plan](/automatization/concepts/plan) for how a Plan works. See [Check funding](/automatization/guides/client#check-funding) and [Persist Plans](/automatization/guides/backend#persist-plans) for the calls.
 
 ## Show Plan progress {#plan-progress}
 
-Show each Row of a saved Plan and how far each Step has gone. Install the client package.
+Show each Row of a saved Plan and how far each Step has gone. Install `@arcanetech/privacy-sdk-automatization-client` and call `planProgress` with a presence report.
 
 ```bash
 npm install @arcanetech/privacy-sdk-automatization-client
 ```
 
-Build one Deposit and one Payout.
-
-```ts
-import type { Plan } from '@arcanetech/privacy-sdk-automatization-plan';
-
-const remainder = {
-  plaintext: { amount: 8n, accumulator: 'pin-transfer' },
-  commitment: 'commitment-remainder',
-  nullifierHash: 'nullifier-remainder',
-};
-
-const afterTransfer = {
-  plaintext: { amount: 7n, accumulator: 'pin-withdrawal' },
-  commitment: 'commitment-after-transfer',
-  nullifierHash: 'nullifier-after-transfer',
-};
-
-const plan: Plan = {
-  rows: [
-    {
-      kind: 'deposit',
-      amount: 10n,
-      step: {
-        freeTokens: 2n,
-        interval: 0n,
-        pinnedInputs: [],
-        pinnedOutputs: [remainder],
-      },
-    },
-    {
-      kind: 'payout',
-      account: 'bob-account',
-      amount: 6n,
-      transfer: {
-        freeTokens: 1n,
-        interval: 0n,
-        pinnedInputs: [remainder],
-        pinnedOutputs: [afterTransfer],
-      },
-      withdrawal: {
-        freeTokens: 1n,
-        interval: 0n,
-        pinnedInputs: [afterTransfer],
-        pinnedOutputs: [],
-      },
-    },
-  ],
-};
-```
-
-Pass that Plan and a report of which pinned nullifiers are consumed and which pinned commitments are in the pool tree.
-
-```ts
-import type { PinnedNotePresence } from '@arcanetech/privacy-sdk-automatization-plan';
-import { planProgress } from '@arcanetech/privacy-sdk-automatization-client';
-
-const presence: PinnedNotePresence = {
-  consumedNullifierHashes: ['nullifier-remainder'],
-  outputCommitmentsInPoolTree: ['commitment-after-transfer'],
-};
-
-const progress = planProgress(plan, presence);
-```
-
-Read the Deposit amount. Read the Payout account and public amount. Read the transfer Step's pinned notes and Free tokens. Read whether that Step is executed or blocked.
-
-```ts
-const deposit = progress.rows[0];
-const payout = progress.rows[1];
-if (deposit?.kind !== 'deposit' || payout?.kind !== 'payout') {
-  throw new Error('expected a Deposit and a Payout');
-}
-
-const depositAmount = deposit.amount;
-const account = payout.account;
-const amount = payout.amount;
-const pinnedInputs = payout.transfer.pinnedInputs;
-const pinnedOutputs = payout.transfer.pinnedOutputs;
-const freeTokens = payout.transfer.freeTokens;
-const executed = payout.transfer.executed;
-const blocked = payout.transfer.blocked;
-```
-
-`depositAmount` is 10. `account` is `bob-account`. `amount` is 6. `pinnedInputs` is the Remainder. `pinnedOutputs` is the next pinned note. `freeTokens` is 1. `executed` is true. That transfer's pinned input nullifier is consumed. Its pinned output commitment is in the pool tree. `blocked` is false.
-
-Each Step shows Free tokens as an amount. The view has no Service scalar. The view has no Execution material. You pass the presence report.
+`planProgress` shows amounts, pinned notes, Free tokens, and whether each Step is executed or blocked. Draft, sign, and submit from [Offchain automatization](/automatization/overview).
 
 ## Protocol Relay package {#protocol-relay}
 
@@ -340,10 +180,10 @@ flowchart TD
 
 ### Frontend vs backend package set
 
-| Path | Packages |
-| --- | --- |
+| Path                          | Packages                                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Frontend** (browser wallet) | `@arcanetech/privacy-sdk-stellar` + `@arcanetech/privacy-sdk-state-redux` + `@arcanetech/privacy-sdk-relay` (wallet kit is outside the SDK) |
-| **Backend** (Node signing) | `@arcanetech/privacy-sdk-stellar/node` + `@arcanetech/privacy-sdk-state-memory` + `@arcanetech/privacy-sdk-relay` |
+| **Backend** (Node signing)    | `@arcanetech/privacy-sdk-stellar/node` + `@arcanetech/privacy-sdk-state-memory` + `@arcanetech/privacy-sdk-relay`                           |
 
 Runnable demos: [Examples](/integration/quick-start).
 
@@ -361,5 +201,8 @@ Runnable demos: [Examples](/integration/quick-start).
   </Card>
   <Card title="Install" href="/application-development/setup">
     Install the Stellar React stack.
+  </Card>
+  <Card title="Offchain automatization" href="/automatization/overview">
+    Draft a Plan, sign Deposits, and run scheduled payouts.
   </Card>
 </CardGroup>

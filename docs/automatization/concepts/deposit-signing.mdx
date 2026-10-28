@@ -1,0 +1,31 @@
+---
+title: Deposit signatures
+description: Why every Deposit waits for the depositor's signature, and what happens when it is missing.
+---
+
+A Deposit moves tokens from the depositor's Stellar account into the pool. Stellar moves tokens out of an account only with the account owner's signature. The automation service never holds the depositor's key, so every Deposit waits for the depositor to sign it.
+
+## What a signature covers
+
+The depositor signs one Deposit at a time. The signature covers the notes that Deposit creates and the current state of the pool. The service cannot use it to deposit into other notes, or reuse it for a later Deposit.
+
+The depositor signs the Initial Deposit when they confirm the Plan. They sign each intermediate Deposit when it becomes the next Step of the Plan. If the pool changes before the Deposit runs, the signature no longer matches, and the depositor signs again.
+
+## A missing signature pauses the Plan
+
+The service runs Steps in order. An intermediate Deposit that has not been signed stops the Plan at that point. Payouts before it run on the tokens deposited earlier. Payouts after it wait.
+
+When the depositor signs, the Deposit runs and the Plan continues. The interval before the next Step starts when the Deposit runs, not when it was due.
+
+<Frame>
+  <img src="/images/automatization/deposit-signature-wait.webp" alt="A schedule with Deposits on days 0 and 21 and Payouts on days 7, 14, and 28. On day 22 the second Deposit is waiting for a signature and Dave's Payout is paused. The depositor signs on day 23, the Deposit runs, and Dave is paid on day 30" />
+</Frame>
+
+## Fee changes before the Initial Deposit
+
+The service quotes the Initial Deposit's fee when the depositor confirms the Plan. If that quote changes before the Initial Deposit runs, the service cancels the Plan instead of charging a different fee. A cancelled Plan keeps no Deposit signatures.
+
+## Related
+
+- [Sign and confirm the Plan](/automatization/guides/client#sign-and-confirm-the-plan) — sign the Initial Deposit from your app.
+- [Sign the next Deposit](/automatization/guides/client#sign-the-next-deposit) — find the Deposit that is waiting and sign it.

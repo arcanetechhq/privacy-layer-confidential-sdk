@@ -1,0 +1,67 @@
+---
+title: Plan
+description: How a Plan schedules Deposits and Payouts, carries value between Steps, and pays its fees.
+---
+
+A Plan is a payment schedule for one asset. It lists who gets paid, how much, and when, and where the money for each payment comes from.
+
+| Term | Meaning |
+| --- | --- |
+| Row | One entry in the schedule: a Deposit or a Payout |
+| Deposit | Tokens the depositor moves from their Stellar account into the pool |
+| Payout | A public amount paid to one recipient's Stellar account |
+| Step | One pool transaction. A Deposit is one Step. A Payout is a withdrawal Step, sometimes preceded by a Transfer Step |
+| Interval | How long the service waits after the previous Step before it runs this one |
+| Remainder | Value a Step passes on to the next Step |
+| Free tokens | Amount each Step reserves to pay its fee |
+
+## Give each payment its own Row
+
+A pool transaction pays at most one public account. So each recipient gets a Payout Row, and each Payout gets its own withdrawal and its own date. The first Row is always the Initial Deposit, which the depositor signs when they confirm the Plan.
+
+<Frame>
+  <img src="/images/automatization/plan-rows.webp" alt="A Plan with an Initial Deposit of 90 USDC and three Payouts to Bob, Carol, and Dave on days 7, 14, and 21, each withdrawn to the recipient's account" />
+</Frame>
+
+## Fix an underfunded Plan
+
+Each Deposit funds the Payouts after it, up to the next Deposit. A Plan is underfunded when the Deposits before a Payout do not bring enough to pay it. The service refuses to confirm an underfunded Plan.
+
+The depositor does not have to bring every token up front. Add an intermediate Deposit before the Payout that is short, and the depositor signs it when it comes due.
+
+<Frame>
+  <img src="/images/automatization/plan-underfunded.webp" alt="Top: a 50 USDC Deposit pays Bob 30 and Carol 20, leaving nothing for Dave's 40. Bottom: an intermediate Deposit of 40 before Dave's Payout funds it" />
+</Frame>
+
+## Carry value forward with Remainders
+
+A Step can create only a few notes. When a Deposit funds more Payouts than one Step can hold, the value that is not paid out yet becomes a Remainder. The next Step spends the Remainder and creates the next payout notes.
+
+A Remainder is locked to the notes the next Step creates. The service cannot spend it any other way. See [Note accumulators](/automatization/concepts/accumulators).
+
+<Frame>
+  <img src="/images/automatization/plan-remainders.webp" alt="Step 1, the Initial Deposit of 100 USDC, creates notes for Bob and Carol and a 50 USDC Remainder. Step 2 spends the Remainder and creates notes for Dave and Erin" />
+</Frame>
+
+## Pay fees from Free tokens
+
+Every Step reserves Free tokens. The fee is quoted only when the Step runs, so the Plan does not record a fee. The service pays the fee from the Step's Free tokens and keeps what the fee did not use.
+
+When a quote is above a Step's Free tokens, that Step does not run. The client raises Free tokens to the current quotes before the depositor signs a Deposit, and adds the increase to the Deposit that funds the Step.
+
+<Frame>
+  <img src="/images/automatization/plan-free-tokens.webp" alt="A Transfer Step spends a 52 USDC Remainder into notes of 25 for Dave and 25 for Erin and reserves 2 USDC of Free tokens. At run time the fee is 1.5 USDC and the service keeps 0.5 USDC" />
+</Frame>
+
+A Plan is fully funded when its Deposits add up to its Payouts plus all Free tokens.
+
+## Follow a Plan's progress
+
+A Step is executed once the pool shows that its notes were spent and the new notes were created. The service runs Steps in order, and each interval starts when the previous Step is executed.
+
+A Step is blocked when one of the notes it needs was spent by a different transaction. A blocked Plan cannot continue.
+
+## Related
+
+- [Edit a Plan in your app](/automatization/guides/client) — compose a draft, add a recipient or a Deposit, and check funding.
+- [Run Plans on your service](/automatization/guides/backend) — save a Plan, count executed Steps, and submit the next Step.

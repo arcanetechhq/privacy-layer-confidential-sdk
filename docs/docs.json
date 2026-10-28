@@ -40,6 +40,33 @@
         ]
       },
       {
+        "group": "Offchain automatization",
+        "pages": [
+          "automatization/overview",
+          {
+            "group": "Concepts",
+            "pages": [
+              "automatization/concepts/plan",
+              "automatization/concepts/accumulators",
+              "automatization/concepts/deposit-signing"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "automatization/guides/backend",
+              "automatization/guides/client"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "automatization/reference/service-ports"
+            ]
+          }
+        ]
+      },
+      {
         "group": "Concepts",
         "pages": [
           "concepts/domain-model",

@@ -1,0 +1,32 @@
+---
+title: Note accumulators
+description: How the pool keeps the depositor's tokens on the route the Plan describes.
+---
+
+Every note a Plan creates carries a lock, called its accumulator. The lock is written when the Plan is drafted, before the depositor signs anything. The pool checks the lock every time someone spends the note.
+
+The automation service holds the key that spends these notes. The key lets the service run the Plan, and the locks stop it from sending the tokens anywhere else.
+
+## Pay only the planned account
+
+A payout note is locked to one Stellar account, one asset, and one amount. The pool accepts a withdrawal of that note only when all three match. A withdrawal to any other account is rejected, and the tokens stay in the pool.
+
+<Frame>
+  <img src="/images/automatization/accumulator-account.webp" alt="A 30 USDC payout note locked to Bob's account. A withdrawal to Bob is accepted. A withdrawal to Eve is rejected and the tokens do not move" />
+</Frame>
+
+## Move only into the planned notes
+
+A note that carries value forward, such as a Remainder, is locked to the exact notes the next Step creates. The pool accepts the transfer only when it creates those notes. A transfer into any other note, including a note the service owns, is rejected.
+
+<Frame>
+  <img src="/images/automatization/accumulator-notes.webp" alt="A 50 USDC Remainder locked to notes for Dave and Erin. A transfer that creates those two notes is accepted. A transfer into a new note for the service is rejected" />
+</Frame>
+
+Each of the next notes carries its own lock. So the first lock fixes the whole route, all the way to the last payout.
+
+## What the locks leave open
+
+Locks fix where tokens go. They do not fix when. The service decides when each Step runs, and it pays fees from each Step's Free tokens. See [Trust assumptions](/automatization/overview#trust-assumptions).
+
+When the depositor confirms a Plan, the service checks that every lock matches the Step that spends the note. It refuses a Plan with a lock that does not match.

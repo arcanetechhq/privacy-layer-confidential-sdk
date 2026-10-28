@@ -1,0 +1,223 @@
+---
+title: Edit a Plan in your app
+description: Set up the client, compose and edit a draft Plan, and sign its Deposits.
+---
+
+Draft, edit, and sign a Plan from the depositor's app. Every edit runs on your automation service and returns a new Plan. Amounts are `bigint` in the asset's smallest unit: 30 USDC is `300_000_000n`.
+
+```bash
+npm install @arcanetech/privacy-sdk-automatization-client @arcanetech/privacy-sdk-automatization-plan
+```
+
+## Set up the client
+
+Create three objects once, and import them wherever the app edits or signs a Plan.
+
+### Connect to your automation service
+
+```ts
+import { createPlanClient } from '@arcanetech/privacy-sdk-automatization-client';
+
+export const planClient = createPlanClient({ baseUrl: AUTOMATION_SERVICE_URL });
+```
+
+### Connect the depositor's wallet
+
+A `DepositSigner` signs the text `depositSigningMessage` builds from a Deposit. Return the depositor key's Ed25519 signature over that text, base64-encoded.
+
+```ts
+import {
+  depositSigningMessage,
+  type DepositSigner,
+} from '@arcanetech/privacy-sdk-automatization-client';
+
+export function walletDepositSigner(signMessage: (message: string) => Promise<string>): DepositSigner {
+  return { sign: (invocation) => signMessage(depositSigningMessage(invocation)) };
+}
+```
+
+In Node scripts and tests, sign with a secret key instead:
+
+```ts
+import { createSecretDepositSigner } from '@arcanetech/privacy-sdk-automatization-client';
+
+export const signer = createSecretDepositSigner({ secretKey: DEPOSITOR_SECRET_KEY });
+```
+
+<Warning>
+  `createSecretDepositSigner` holds the depositor's secret key. Never use it in a browser.
+</Warning>
+
+### Read the pool
+
+A `PoolView` reads the pool to show progress and find the Deposit that is waiting for a signature.
+
+```ts
+import { Networks } from '@stellar/stellar-sdk';
+import { createSorobanPoolView } from '@arcanetech/privacy-sdk-automatization-client';
+
+export const pool = createSorobanPoolView({
+  rpcUrl: SOROBAN_RPC_URL,
+  contractId: POOL_CONTRACT_ID,
+  networkPassphrase: Networks.TESTNET,
+});
+```
+
+## Compose a draft
+
+Pass each recipient's Stellar account and amount. The service builds the Initial Deposit, one Payout per recipient, and any intermediate Transfers.
+
+```ts
+const draft = await planClient.compose([
+  { account: BOB_ACCOUNT, amount: 300_000_000n },
+  { account: CAROL_ACCOUNT, amount: 200_000_000n },
+]);
+const plan = await planClient.coverFees(draft);
+```
+
+`coverFees` raises any Step whose fee quote is above its Free tokens, and adds the increase to the Deposit that funds it. Call it after every edit, before the depositor signs.
+
+## Check funding
+
+The service refuses to confirm an underfunded Plan. Check it in the app first:
+
+```ts
+import { isFundedPlan, underfundedSteps } from '@arcanetech/privacy-sdk-automatization-plan';
+
+const shortfalls = underfundedSteps(plan);
+const funded = isFundedPlan(plan);
+```
+
+`shortfalls` lists the Steps their Deposits cannot pay for. `funded` is true when the Deposits equal the Payouts plus all Free tokens.
+
+## Change an interval
+
+An interval belongs to the later of two adjacent Steps. List the Plan's Steps in order, then replace the interval of the Step after `stepIndex`:
+
+```ts
+import type { StepPlace } from '@arcanetech/privacy-sdk-automatization-client';
+import type { Plan, Step } from '@arcanetech/privacy-sdk-automatization-plan';
+
+export function stepsOf(plan: Plan): { place: StepPlace; step: Step }[] {
+  return plan.rows.flatMap((row, rowIndex): { place: StepPlace; step: Step }[] => {
+    if (row.kind === 'deposit') return [{ place: { rowIndex, role: 'deposit' }, step: row.step }];
+    const withdrawal = { place: { rowIndex, role: 'withdrawal' } as const, step: row.withdrawal };
+    if (row.transfer === undefined) return [withdrawal];
+    return [{ place: { rowIndex, role: 'transfer' }, step: row.transfer }, withdrawal];
+  });
+}
+```
+
+```ts
+const following = stepsOf(plan)[stepIndex + 1];
+if (following === undefined) throw new Error('No Step follows that index');
+const revised = await planClient.replaceStepInterval(plan, following.place, interval);
+```
+
+The interval starts when the earlier Step executes, in the unit of the service clock. The Initial Deposit always has interval 0, and `replaceStepInterval` throws `InitialDepositIntervalError` for it.
+
+## Add a Deposit
+
+Insert a Deposit between two Rows, then move `amount` onto it from the Initial Deposit. The new Deposit already holds the Free-token floor.
+
+```ts
+const inserted = await planClient.insertDeposit(plan, rowIndex);
+const moved = await planClient.moveDepositAmount(inserted, {
+  fromRowIndex: 0,
+  toRowIndex: rowIndex,
+  amount,
+});
+const revised = await planClient.coverFees(moved);
+```
+
+`rowIndex` must be greater than 0 and less than the number of Rows. To move tokens between two existing Deposits, pass the earlier one as `fromRowIndex`.
+
+## Add a recipient
+
+Compose again with the new recipient last, then put the draft's edits back.
+
+### Compose with the new recipient
+
+```ts
+const recipients = plan.rows.flatMap((row) =>
+  row.kind === 'payout' ? [{ account: row.account, amount: row.amount }] : [],
+);
+let next = await planClient.compose([...recipients, { account: DAVE_ACCOUNT, amount: 400_000_000n }]);
+```
+
+### Restore the intermediate Deposits
+
+Insert each intermediate Deposit at its old Row and move its old amount back onto it.
+
+```ts
+for (const [rowIndex, row] of plan.rows.entries()) {
+  if (rowIndex === 0 || row.kind !== 'deposit') continue;
+  next = await planClient.insertDeposit(next, rowIndex);
+  const inserted = next.rows[rowIndex];
+  if (inserted?.kind === 'deposit' && row.amount > inserted.amount) {
+    next = await planClient.moveDepositAmount(next, {
+      fromRowIndex: 0,
+      toRowIndex: rowIndex,
+      amount: row.amount - inserted.amount,
+    });
+  }
+}
+```
+
+### Restore Free tokens and intervals
+
+Copy each Step's Free tokens and interval onto the Step at the same place, using `stepsOf` from [Change an interval](#change-an-interval).
+
+```ts
+const key = (place: StepPlace) => `${place.rowIndex}:${place.role}`;
+const composed = new Map(stepsOf(next).map(({ place, step }) => [key(place), step]));
+
+for (const { place, step } of stepsOf(plan)) {
+  const current = composed.get(key(place));
+  if (current === undefined) continue;
+  if (current.freeTokens !== step.freeTokens) {
+    next = await planClient.reviseFreeTokens(next, place, step.freeTokens);
+  }
+  if (place.rowIndex > 0 && current.interval !== step.interval) {
+    next = await planClient.replaceStepInterval(next, place, step.interval);
+  }
+}
+const revised = await planClient.coverFees(next);
+```
+
+Composing again can move a Payout onto a different Transfer. A Step that only exists in the new draft keeps the service defaults.
+
+## Sign and confirm the Plan
+
+Sign the Initial Deposit and confirm the Plan. `confirm` returns the Plan id.
+
+```ts
+const invocation = await planClient.initialDepositInvocation(plan);
+const sorobanAuthorization = await signer.sign(invocation);
+const { id } = await planClient.confirm(plan, sorobanAuthorization);
+```
+
+When the service submits to a pool, the invocation also carries `authEntries`.
+
+## Sign the next Deposit
+
+Ask the service which Deposit is waiting, find its Row, and sign it.
+
+```ts
+import {
+  planProgress,
+  readPinnedPresence,
+  waitingDeposit,
+} from '@arcanetech/privacy-sdk-automatization-client';
+
+const saved = await planClient.read(id);
+const progress = planProgress(saved, await readPinnedPresence(saved, pool));
+const invocation = await planClient.depositToSign(id);
+const rowIndex = waitingDeposit(saved, progress, invocation);
+
+if (invocation !== undefined && rowIndex !== undefined) {
+  await planClient.authorizeDeposit(id, await signer.sign(invocation));
+}
+```
+
+`invocation` is `undefined` when no Deposit is waiting. `progress` also tells you which Steps are executed or blocked, so you can show it in the app.
