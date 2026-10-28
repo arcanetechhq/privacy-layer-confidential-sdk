@@ -3,6 +3,8 @@
   "references": [
     { "path": "./packages/automatization/client/tsconfig.test.json" },
     { "path": "./packages/automatization/plan/tsconfig.test.json" },
+    { "path": "./packages/automatization/service/tsconfig.json" },
+    { "path": "./packages/automatization/service/tsconfig.test.json" },
     { "path": "./packages/core/tsconfig.test.json" },
     { "path": "./packages/data-layer/tsconfig.test.json" },
     { "path": "./packages/relay/tsconfig.test.json" },

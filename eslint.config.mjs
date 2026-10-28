@@ -8,6 +8,16 @@ import { defineConfig } from 'eslint/config';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 
+const moduleBoundaryPattern = {
+  regex: String.raw`^\.(?!/[^/]+$)(?!.*/[^./][^/]*/index\.js$)`,
+  message:
+    'Import a sibling file as ./file.js or another module through its public <module>/index.js; do not import upward or into module internals.',
+};
+
+const automatizationImportBoundaries = (...patterns) => ({
+  'no-restricted-imports': ['error', { patterns: [moduleBoundaryPattern, ...patterns] }],
+});
+
 export default defineConfig([
   sonarjsConfigs.recommended,
   unicorn.configs['recommended'],
@@ -80,6 +90,26 @@ export default defineConfig([
     rules: {
       'unicorn/prefer-node-protocol': 'off',
     },
+  },
+  {
+    files: ['packages/automatization/*/src/**/*.ts'],
+    rules: automatizationImportBoundaries(),
+  },
+  {
+    files: ['packages/automatization/service/src/use-cases/**/*.ts'],
+    rules: automatizationImportBoundaries({
+      regex: String.raw`^\.\./[^./]`,
+      message: 'A use case must not import another use case; move shared logic into domain/.',
+    }),
+  },
+  {
+    files: [
+      'packages/automatization/service/src/{defaults,stellar,store,testing}/**/*.ts',
+    ],
+    rules: automatizationImportBoundaries({
+      regex: String.raw`/(use-cases|domain)/`,
+      message: 'Adapters implement ports; they must not import use cases or domain logic.',
+    }),
   },
   {
     files: ['packages/stellar/src/assets/load-node.ts'],
