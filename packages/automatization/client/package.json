@@ -1,6 +1,6 @@
 {
   "name": "@arcanetech/privacy-sdk-automatization-client",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Client view of a saved Plan: rows, payouts, pinned notes, Free tokens, and executed or blocked Steps",
   "type": "module",
   "main": "./dist/index.js",
@@ -31,7 +31,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@arcanetech/privacy-sdk-automatization-plan": "0.0.0",
+    "@arcanetech/privacy-sdk-automatization-plan": "0.0.1",
     "@stellar/stellar-sdk": "^16.0.1"
   }
 }
