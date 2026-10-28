@@ -1,6 +1,6 @@
 {
   "name": "@arcanetech/privacy-sdk-automatization-plan",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Shared Plan document: funded, underfunded, executed, and blocked checks",
   "type": "module",
   "main": "./dist/index.js",

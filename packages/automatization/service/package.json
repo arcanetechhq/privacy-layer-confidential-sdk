@@ -1,6 +1,6 @@
 {
   "name": "@arcanetech/privacy-sdk-automatization-service",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Compose a Plan and run its Steps behind quote, proof, inspect, and submit ports",
   "type": "module",
   "main": "./dist/index.js",
@@ -40,8 +40,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@arcanetech/privacy-sdk-automatization-plan": "0.0.0",
-    "@arcanetech/privacy-sdk-stellar": "0.8.3",
+    "@arcanetech/privacy-sdk-automatization-plan": "0.0.1",
+    "@arcanetech/privacy-sdk-stellar": "0.8.4",
     "@arcanetech/stellar-privacy-pool-zk-sdk": ">=0.15.0 <1.0.0",
     "@stellar/stellar-sdk": "^16.0.1"
   }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.4
+
+### Patch Changes
+
+- 585ce3e: Prepare transactions whose notes carry a non-empty accumulator, and accept the matching public-signal count when a transaction goes through Protocol Relay. Export `quoteRequiredFee`, `kytAuthorizationScValue`, and `readTreeLeafCommitments` from `@arcanetech/privacy-sdk-stellar/transact`.
+
 ## 0.8.3
 
 ### Patch Changes
