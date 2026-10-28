@@ -85,7 +85,8 @@ function profileFromShape(
     EPHEMERAL_COORDINATE_COUNT * shape.publicNInputs +
     EPHEMERAL_COORDINATE_COUNT * shape.publicNOutputs +
     shape.publicNInputs +
-    shape.publicNOutputs;
+    shape.publicNOutputs +
+    (ciphertextsInPublicSignals ? 0 : shape.publicNInputs);
   const stateRoot = publicOutputsLength;
   return {
     nonce,

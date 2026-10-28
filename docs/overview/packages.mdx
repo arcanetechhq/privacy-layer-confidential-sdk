@@ -21,6 +21,9 @@ flowchart BT
   Stellar["@arcanetech/privacy-sdk-stellar"]
   DataLayer["@arcanetech/privacy-sdk-data-layer"]
   Relay["@arcanetech/privacy-sdk-relay"]
+  Plan["@arcanetech/privacy-sdk-automatization-plan"]
+  Service["@arcanetech/privacy-sdk-automatization-service"]
+  Client["@arcanetech/privacy-sdk-automatization-client"]
   Core["@arcanetech/privacy-sdk-core"]
   Memory["@arcanetech/privacy-sdk-state-memory"]
   Redux["@arcanetech/privacy-sdk-state-redux"]
@@ -28,6 +31,11 @@ flowchart BT
   App --> Stellar
   App --> DataLayer
   App --> Relay
+  App --> Plan
+  App --> Service
+  App --> Client
+  Client --> Plan
+  Service --> Plan
   App --> Memory
   App --> Redux
   Stellar --> Core
@@ -36,6 +44,9 @@ flowchart BT
   Redux --> Core
 ```
 
+- **Plan** — a Plan for one asset. Check that it is funded, which Step is underfunded, and whether a Step is executed or blocked. You pass a presence report. This package does not query a chain.
+- **Plan progress** — show a saved Plan. Call `planProgress`, `readPinnedPresence`, and `waitingDeposit`. Call `createPlanClient` to compose, revise, and confirm through an automation service. Call `createSecretDepositSigner` or pass your own signer. Call `createSorobanPoolView` when you read the pool.
+- **Plan service** — compose a Plan and run its Steps. Call `compose`, `reviseFreeTokens`, `insertDeposit`, `moveDepositAmount`, `replaceStepInterval`, `confirm`, `depositToSign`, `read`, `authorizeDeposit`, `runDueSteps`, and `submitNextStep`. Pass Fee quote, proof, inspect, and pool submit ports, or build them for Stellar from the `/stellar` entry. `createMemoryPlanStore` keeps Plans in memory, and `composePlanStore` combines your own store roles.
 - **Core** — intents, prepare/execute lifecycle, errors, progress events, and the private-data authorization envelope.
 - **Private data** — HTTP client for private records. You pass the schemas. `find` returns records only after your schema accepts the payload. Challenge methods stop before a request when you omit the completion schema.
 - **Relay** — Protocol Relay runtime: admission, polling, retry, and fallback over caller-supplied ports. It owns statuses, reason codes, and package JSON serialization, follows a caller-supplied submission path, and never inspects opaque package payloads or deposit amounts. Relaying is enabled only when the caller sets `relayConfig.origin`; otherwise the runtime Direct-submits and does not contact a relayer. Settlement polling is bounded. The package does not depend on Stellar or Soroban.
@@ -50,7 +61,10 @@ Internal transitive dependencies are not part of the public integration surface.
 
 | Import                                                                                         | Purpose                                                                                                                 |
 | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `@arcanetech/privacy-sdk-core`                                                                 | Intents, lifecycle helpers, error types, progress events, authorization envelope                                        |
+| `@arcanetech/privacy-sdk-automatization-client`                                                | `planProgress`, `readPinnedPresence`, `waitingDeposit`, `createPlanClient`, `createSorobanPoolView`                     |
+| `@arcanetech/privacy-sdk-automatization-plan`                                                  | Plan document. Funded, underfunded, executed, and blocked checks                                                        |
+| `@arcanetech/privacy-sdk-automatization-service`                                               | `compose`, `confirm`, `depositToSign`, `runDueSteps`, `createMemoryPlanStore`, `composePlanStore`. Stellar ports from `/stellar`, an in-memory pool from `/testing` |
+| `@arcanetech/privacy-sdk-core`                                                                 | Intents, lifecycle helpers, error types, progress events, `measureStage` timings, authorization envelope                |
 | `@arcanetech/privacy-sdk-data-layer`                                                           | Private-record HTTP client. Checks caller-supplied schemas before returning                                             |
 | [`@arcanetech/privacy-sdk-relay`](https://www.npmjs.com/package/@arcanetech/privacy-sdk-relay) | Protocol relay runtime (ports, polling, retry, fallback) and the wire vocabulary (statuses, reason codes, package JSON) |
 | `@arcanetech/privacy-sdk-state-memory`                                                         | In-memory state adapter for prototypes and tests                                                                        |
@@ -106,6 +120,26 @@ Omit `completionSchema` when you only list records. `createChallenge` and `compl
 
 Supply the record schema, data type, and protocol for your records. After you decrypt an incoming note, call [`assessIncomingNote`](/integration/data-sources#check-an-incoming-note) before you add it to the spendable balance. To pay a note's full value to the connected wallet, use [Public withdraw](/application-development/how-to/public-withdraw).
 
+## Check a Plan {#plan-document}
+
+Decide whether a Plan is funded, which Step is underfunded, and whether a Step is executed or blocked. Install `@arcanetech/privacy-sdk-automatization-plan` and pass the Plan plus a presence report. Chain reads stay in that report.
+
+```bash
+npm install @arcanetech/privacy-sdk-automatization-plan
+```
+
+See [Plan](/automatization/concepts/plan) for how a Plan works. See [Check funding](/automatization/guides/client#check-funding) and [Persist Plans](/automatization/guides/backend#persist-plans) for the calls.
+
+## Show Plan progress {#plan-progress}
+
+Show each Row of a saved Plan and how far each Step has gone. Install `@arcanetech/privacy-sdk-automatization-client` and call `planProgress` with a presence report.
+
+```bash
+npm install @arcanetech/privacy-sdk-automatization-client
+```
+
+`planProgress` shows amounts, pinned notes, Free tokens, and whether each Step is executed or blocked. Draft, sign, and submit from [Offchain automatization](/automatization/overview).
+
 ## Protocol Relay package {#protocol-relay}
 
 Install [`@arcanetech/privacy-sdk-relay`](https://www.npmjs.com/package/@arcanetech/privacy-sdk-relay) when the sender must stay private (zero public deposit) or you send to an unregistered recipient (escrow). Typical deposits keep the sender public and stay on Direct Submission — they do not need this package. The runtime does not depend on Stellar or Soroban.
@@ -146,10 +180,10 @@ flowchart TD
 
 ### Frontend vs backend package set
 
-| Path | Packages |
-| --- | --- |
+| Path                          | Packages                                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Frontend** (browser wallet) | `@arcanetech/privacy-sdk-stellar` + `@arcanetech/privacy-sdk-state-redux` + `@arcanetech/privacy-sdk-relay` (wallet kit is outside the SDK) |
-| **Backend** (Node signing) | `@arcanetech/privacy-sdk-stellar/node` + `@arcanetech/privacy-sdk-state-memory` + `@arcanetech/privacy-sdk-relay` |
+| **Backend** (Node signing)    | `@arcanetech/privacy-sdk-stellar/node` + `@arcanetech/privacy-sdk-state-memory` + `@arcanetech/privacy-sdk-relay`                           |
 
 Runnable demos: [Examples](/integration/quick-start).
 
@@ -167,5 +201,8 @@ Runnable demos: [Examples](/integration/quick-start).
   </Card>
   <Card title="Install" href="/application-development/setup">
     Install the Stellar React stack.
+  </Card>
+  <Card title="Offchain automatization" href="/automatization/overview">
+    Draft a Plan, sign Deposits, and run scheduled payouts.
   </Card>
 </CardGroup>

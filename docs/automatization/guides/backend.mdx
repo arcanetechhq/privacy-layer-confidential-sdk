@@ -1,0 +1,329 @@
+---
+title: Run Plans on your service
+description: Wire the Stellar ports, persist Plans, collect Deposit signatures, and submit due Steps.
+---
+
+Run confirmed Plans on your backend with `@arcanetech/privacy-sdk-automatization-service`.
+
+```bash
+npm install @arcanetech/privacy-sdk-automatization-service @arcanetech/privacy-sdk-automatization-plan
+```
+
+## Wire the Stellar ports {#wire-the-stellar-ports}
+
+Build every pool port from the `/stellar` entry. It runs on Node.js and signs with your service account.
+
+<Warning>
+  `serviceSecret` signs every pool transaction, and `serviceSecretSeed` owns every
+  pinned note. Keep both on the service host.
+</Warning>
+
+```ts
+import { readFile } from 'node:fs/promises';
+import {
+  createDerivedNoteOwnership,
+  createMemoryPlanStore,
+  systemClock,
+} from '@arcanetech/privacy-sdk-automatization-service';
+import {
+  createKytFeeQuotes,
+  createSorobanPoolReader,
+  createStellarNoteDeriver,
+  createStellarStepTransactions,
+  type StellarKytAccess,
+  type StellarServiceNetwork,
+} from '@arcanetech/privacy-sdk-automatization-service/stellar';
+
+const network: StellarServiceNetwork = {
+  rpcUrl: 'https://soroban-testnet.stellar.org',
+  networkPassphrase: 'Test SDF Network ; September 2015',
+  poolContract: process.env.POOL_CONTRACT!,
+  registryContract: process.env.PRIVATE_ADDRESS_REGISTRY_CONTRACT!,
+  applicationId: process.env.APPLICATION_ID!,
+};
+const kyt: StellarKytAccess = {
+  apiBaseUrl: process.env.KYT_API_BASE_URL!,
+  passageRegistryContract: process.env.KYT_PASSAGE_REGISTRY_CONTRACT!,
+};
+const assetContract = process.env.ASSET_CONTRACT!;
+const serviceScalar = process.env.SERVICE_SECRET_SEED!;
+
+export async function createPorts(sdkWasmPath: string, noteSalt: string) {
+  const store = createMemoryPlanStore();
+  const notes = await createStellarNoteDeriver({
+    sdkWasm: await readFile(sdkWasmPath),
+    serviceSecretSeed: serviceScalar,
+    noteSalt,
+    assetContract,
+    applicationId: network.applicationId,
+  });
+  const reader = createSorobanPoolReader({ network, store });
+  const transactions = createStellarStepTransactions({
+    network,
+    kyt,
+    serviceSecret: process.env.SERVICE_ACCOUNT_SECRET!,
+    notes,
+    reader,
+    auditPublicKey: process.env.AUDIT_PUBLIC_KEY!,
+    zkConfigNonce: 7n,
+  });
+  const steps = {
+    ...transactions,
+    clock: systemClock,
+    currentRoot: reader.currentRoot,
+    presence: reader.presence,
+    feeQuotes: createKytFeeQuotes({ network, kyt, assetContract }),
+    store,
+  };
+  const confirm = {
+    ...steps,
+    serviceScalar,
+    noteOwnership: createDerivedNoteOwnership(notes, serviceScalar),
+  };
+  return {
+    notes,
+    steps,
+    confirm,
+    setDepositor: (account: string) => transactions.setDepositor(account),
+  };
+}
+```
+
+`sdkWasm` is the WebAssembly module of the transaction preparation library. `noteSalt` must stay the same for the life of every Plan you confirm. Store it with your Plans. Pass `ensureNoteOwners` to register the service's private addresses before a Step spends to them.
+
+## Persist Plans {#persist-plans}
+
+Implement each [store role](/automatization/reference/service-ports#planstore) over your database, then combine them with `composePlanStore`. This role keeps Plan documents in one table. `planToJson` turns each `bigint` into a string, and `restorePlanValue` turns it back.
+
+```ts
+import {
+  planToJson,
+  restorePlanValue,
+  type Plan,
+} from '@arcanetech/privacy-sdk-automatization-plan';
+import {
+  PlanNotFoundError,
+  type PlanDocuments,
+} from '@arcanetech/privacy-sdk-automatization-service';
+
+type Query = (sql: string, params: unknown[]) => Promise<{ document: unknown }[]>;
+
+export function sqlPlanDocuments(query: Query): PlanDocuments {
+  return {
+    async savePlan(id, plan) {
+      await query(
+        `INSERT INTO plans (id, document) VALUES ($1, $2)
+         ON CONFLICT (id) DO UPDATE SET document = EXCLUDED.document`,
+        [id, JSON.stringify(planToJson(plan))],
+      );
+    },
+    async read(id) {
+      const [row] = await query('SELECT document FROM plans WHERE id = $1', [id]);
+      if (row === undefined) throw new PlanNotFoundError();
+      return restorePlanValue(row.document) as Plan;
+    },
+  };
+}
+```
+
+Write the other roles the same way and pass all seven to `composePlanStore`:
+
+```ts
+import {
+  composePlanStore,
+  type PlanStore,
+  type PlanStoreParts,
+} from '@arcanetech/privacy-sdk-automatization-service';
+
+export function createSqlPlanStore(parts: PlanStoreParts): PlanStore {
+  return composePlanStore(parts);
+}
+```
+
+<Warning>
+  Deposit authorizations and the owner scalar of each Unspent note live in
+  `DepositMaterial` and `UnspentNoteStore`. Keep those tables on the service host.
+</Warning>
+
+## Collect a Deposit signature
+
+`depositToSign` returns the invocation for a Deposit and the Soroban authorization entries the depositor signs. Pass a draft Plan for the Initial Deposit, or a Plan id for the next due Deposit.
+
+```ts
+import {
+  confirm,
+  depositToSign,
+  type ConfirmDependencies,
+  type DepositToSignDependencies,
+} from '@arcanetech/privacy-sdk-automatization-service';
+import type { Plan } from '@arcanetech/privacy-sdk-automatization-plan';
+
+export async function initialSigning(plan: Plan, deps: DepositToSignDependencies) {
+  return depositToSign(plan, deps);
+}
+
+export async function confirmSigned(
+  plan: Plan,
+  sorobanAuthorization: string,
+  deps: DepositToSignDependencies & ConfirmDependencies,
+) {
+  const { invocation } = await depositToSign(plan, deps);
+  return confirm(plan, { invocation, sorobanAuthorization }, deps);
+}
+```
+
+`depositToSign` throws `DepositStepNotDueError` when the Plan has no Deposit waiting, and `DepositRefusedError` when the Fee quote is above the Step's Free tokens or the compliance check refuses it. For a later Deposit, pass the same invocation and the signed entries to `authorizeDeposit`.
+
+## Count executed Steps
+
+A Step is executed when its pinned inputs are spent and its pinned outputs are in the pool tree.
+
+```ts
+import { isExecutedStep } from '@arcanetech/privacy-sdk-automatization-plan';
+import {
+  locateSteps,
+  type StepDependencies,
+} from '@arcanetech/privacy-sdk-automatization-service';
+
+export async function countExecutedSteps(
+  id: string,
+  { store, presence }: StepDependencies,
+) {
+  const steps = locateSteps(await store.read(id));
+  const report = await presence.report();
+  const executed = steps.filter((located) =>
+    isExecutedStep(located.step, report),
+  ).length;
+  return { executed, total: steps.length };
+}
+```
+
+`total` counts every Deposit, Transfer, and withdrawal.
+
+## Read the next Step
+
+`earliestOpenStep` returns the first Step that is not executed. Check it against the pool, the fee quote, and the Deposit signature.
+
+```ts
+import { isBlockedStep } from '@arcanetech/privacy-sdk-automatization-plan';
+import {
+  earliestOpenStep,
+  locateSteps,
+  quoteRequest,
+  type StepDependencies,
+} from '@arcanetech/privacy-sdk-automatization-service';
+
+export async function nextStepStatus(id: string, deps: StepDependencies) {
+  if (await deps.store.isCancelled(id)) return { status: 'cancelled' } as const;
+  const report = await deps.presence.report();
+  const steps = locateSteps(await deps.store.read(id));
+  const next = earliestOpenStep(steps, report);
+  if (next === undefined) return { status: 'complete' } as const;
+  const { place, step } = next;
+  if (isBlockedStep(step, report)) return { status: 'blocked', place } as const;
+  if (step.transactionId)
+    return { status: 'submitted', place, transactionId: step.transactionId } as const;
+  const quote = await deps.feeQuotes.quote(
+    quoteRequest(step, next.publicDeposit, next.publicWithdrawal),
+  );
+  if (quote.amount > step.freeTokens)
+    return { status: 'feeAboveFreeTokens', place, quote } as const;
+  const prepared = await deps.store.preparedDeposit(id, place);
+  if (
+    place.role === 'deposit' &&
+    prepared?.invocation.root !== (await deps.currentRoot.current())
+  ) {
+    return { status: 'awaitingSignature', place } as const;
+  }
+  const previous = steps[next.index - 1];
+  const startedAt = previous
+    ? await deps.store.executedAt(
+        id,
+        `${previous.place.rowIndex}:${previous.place.role}`,
+      )
+    : await deps.store.confirmedAt(id);
+  return {
+    status: 'scheduled',
+    place,
+    dueAt: startedAt === undefined ? undefined : startedAt + step.interval,
+  } as const;
+}
+```
+
+`awaitingSignature` means the Deposit has no signature for the current pool root. `scheduled` has no `dueAt` until the service records when the previous Step executed. `runDueSteps` records it on its next pass.
+
+## Prepare the next transaction
+
+Build the transaction for a `scheduled` Step without submitting it. A Deposit reuses the invocation the depositor signed. Any other Step asks your proof port.
+
+```ts
+import {
+  earliestOpenStep,
+  locateSteps,
+  maskedOutputs,
+  quoteRequest,
+  type StepDependencies,
+} from '@arcanetech/privacy-sdk-automatization-service';
+
+export async function prepareNextTransaction(id: string, deps: StepDependencies) {
+  const next = earliestOpenStep(
+    locateSteps(await deps.store.read(id)),
+    await deps.presence.report(),
+  );
+  if (next === undefined) return undefined;
+  if (next.place.role === 'deposit') {
+    const prepared = await deps.store.preparedDeposit(id, next.place);
+    return (
+      prepared && {
+        envelopeSigner: deps.serviceAccount,
+        invocation: prepared.invocation,
+      }
+    );
+  }
+  const quote = await deps.feeQuotes.quote(
+    quoteRequest(next.step, next.publicDeposit, next.publicWithdrawal),
+  );
+  const { feeNote, unspentNote } = await maskedOutputs(
+    next.step,
+    quote,
+    deps.freshScalars,
+  );
+  const invocation = await deps.proofs.prove({
+    step: next.step,
+    quote,
+    root: await deps.currentRoot.current(),
+    feeNote,
+    ...(unspentNote && { unspentNote }),
+    publicDeposit: next.publicDeposit,
+    publicWithdrawal: next.publicWithdrawal,
+    recipient: next.recipient,
+  });
+  return { envelopeSigner: deps.serviceAccount, invocation };
+}
+```
+
+<Warning>
+  Do not submit this preview yourself. `maskedOutputs` can take a new Unspent note
+  scalar on every call, and the store keeps only the scalar `submitNextStep` or
+  `runDueSteps` used.
+</Warning>
+
+## Submit due Steps
+
+`runDueSteps` submits the next due Step of every Plan and honors intervals. `submitNextStep` submits one Plan's next Step and ignores its interval. Both store the transaction id and the Unspent note.
+
+```ts
+import {
+  runDueSteps,
+  type StepDependencies,
+} from '@arcanetech/privacy-sdk-automatization-service';
+
+export function runOnSchedule(deps: StepDependencies, everyMs: number) {
+  let running = Promise.resolve();
+  return setInterval(() => {
+    running = running.then(() => runDueSteps(deps)).catch(console.error);
+  }, everyMs);
+}
+```
+
+Run one pass at a time, so two passes never submit the same Step. A Step whose submission returns `ok: false` stays unsubmitted, and the next run tries it again.

@@ -1,0 +1,61 @@
+---
+title: Automate payouts offchain
+description: Draft a Plan, sign each Deposit, and let your service pay recipients on a schedule.
+---
+
+Schedule private payouts from one asset. The depositor drafts a Plan, signs each Deposit, and your automation service pays each recipient when its interval has elapsed.
+
+A Plan is a list of Rows. A Deposit Row brings tokens into the pool from the depositor's Stellar account. A Payout Row pays a public amount to one Stellar account. The service runs each Row as one or more pool transactions, called Steps.
+
+## Trust assumptions
+
+The depositor trusts the automation service with three things:
+
+- **Timing.** The service decides when each Step runs. The service keeps the intervals, and the pool does not enforce them. A service can run a Step late, or stop running the Plan.
+- **Free tokens.** Each Step reserves Free tokens for its fee. The service pays the fee from them and keeps whatever the fee did not use.
+- **Plan contents.** The service sees every recipient, amount, and date in the Plan.
+
+The depositor does not trust the service with where the tokens go. The pool enforces that, as described below.
+
+## What the service can do with funds
+
+| Where the tokens are | What the service can do |
+| --- | --- |
+| The depositor's Stellar account | Nothing until the depositor signs a Deposit. Each signature covers exactly the notes that Deposit creates. See [Deposit signatures](/automatization/concepts/deposit-signing). |
+| Pinned notes in the pool | Spend them only along the Plan's route. Each note is locked to the next notes or to one recipient, asset, and amount, and the pool rejects any other spend. See [Note accumulators](/automatization/concepts/accumulators). |
+| Free tokens on a Step | Pay the Step's fee and keep the rest. |
+| Tokens paid to a recipient | Nothing. They are in the recipient's Stellar account. |
+
+The service holds the key that spends pinned notes. If the service stops, tokens already in the pool stay in pinned notes until the service runs the next Step.
+
+## Components
+
+- **Depositor app.** Uses `@arcanetech/privacy-sdk-automatization-client`. Drafts and edits the Plan through the automation service, asks the depositor's wallet to sign each Deposit, and shows progress read from the pool.
+- **Depositor wallet.** Signs each Deposit. Only this signature can move tokens out of the depositor's account.
+- **Automation service.** Your backend, built with `@arcanetech/privacy-sdk-automatization-service`. Composes Plans, checks every lock when the depositor confirms, stores Plans and Deposit signatures, and submits each Step when it is due. Holds the key that spends pinned notes and the account that submits transactions.
+- **Service ports.** Adapters you pass to the service: storage, clock, fee quotes, transaction preparation, compliance inspection, pool reads, and pool submission. Every network call happens in a port. See [Service ports](/automatization/reference/service-ports).
+- **Plan document.** `@arcanetech/privacy-sdk-automatization-plan`. The format the app and the service exchange, with funding and progress checks. It makes no network calls.
+- **Privacy pool.** Holds deposited tokens, verifies each transaction, checks every note lock, and pays recipients.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Plan" href="/automatization/concepts/plan">
+    Rows, Remainders, Free tokens, and funding.
+  </Card>
+  <Card title="Note accumulators" href="/automatization/concepts/accumulators">
+    How the pool keeps tokens on the Plan's route.
+  </Card>
+  <Card title="Deposit signatures" href="/automatization/concepts/deposit-signing">
+    Why each Deposit waits for the depositor.
+  </Card>
+  <Card title="Edit a Plan in your app" href="/automatization/guides/client">
+    Set up the client, compose a draft, and sign Deposits.
+  </Card>
+  <Card title="Run Plans on your service" href="/automatization/guides/backend">
+    Save a Plan, read the next Step, and submit it.
+  </Card>
+  <Card title="Service ports" href="/automatization/reference/service-ports">
+    Port interfaces and the implementations the SDK ships.
+  </Card>
+</CardGroup>

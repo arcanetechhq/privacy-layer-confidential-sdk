@@ -1,0 +1,321 @@
+---
+title: Service ports
+description: Interfaces the automation service calls, and the implementations the SDK ships.
+---
+
+`@arcanetech/privacy-sdk-automatization-service` keeps no state of its own. You pass ports: small objects whose methods the service calls. Every port method returns a `Promise`, except `NoteDeriver.derive`.
+
+| Function                                            | Takes                        |
+| --------------------------------------------------- | ---------------------------- |
+| `compose`, `coverFreeTokens`                        | `NoteDeriver`                |
+| `confirm`                                           | `ConfirmDependencies`        |
+| `depositToSign`                                     | `DepositToSignDependencies`  |
+| `authorizeDeposit`, `runDueSteps`, `submitNextStep` | `StepDependencies`           |
+| `read`, `isCancelledPlan`, `unspentNotes`           | One [store role](#planstore) |
+
+| Field            | Type                                       | `ConfirmDependencies` | `StepDependencies` | `DepositToSignDependencies` |
+| ---------------- | ------------------------------------------ | --------------------- | ------------------ | --------------------------- |
+| `store`          | [`PlanStore`](#planstore) role             | `ConfirmStore`        | `StepRunStore`     | `read` only                 |
+| `clock`          | [`Clock`](#clock)                          | Yes                   | Yes                | No                          |
+| `feeQuotes`      | [`FeeQuotes`](#feequotes)                  | Yes                   | Yes                | Yes                         |
+| `currentRoot`    | [`CurrentRoot`](#currentroot-and-presence) | Yes                   | Yes                | Yes                         |
+| `presence`       | [`Presence`](#currentroot-and-presence)    | No                    | Yes                | Yes                         |
+| `proofs`         | [`Proofs`](#proofs)                        | Yes                   | Yes                | Yes                         |
+| `freshScalars`   | [`FreshScalars`](#freshscalars)            | Yes                   | Yes                | Yes                         |
+| `inspection`     | [`Inspection`](#inspection)                | Yes                   | Yes                | Yes                         |
+| `pool`           | [`PoolSubmission`](#poolsubmission)        | Yes                   | Yes                | No                          |
+| `depositSigning` | [`DepositSigning`](#depositsigning)        | No                    | No                 | Yes                         |
+| `noteOwnership`  | [`NoteOwnership`](#noteownership)          | Yes                   | No                 | No                          |
+| `serviceAccount` | `string`                                   | Yes                   | Yes                | No                          |
+| `serviceScalar`  | `string`                                   | Yes                   | No                 | No                          |
+
+`serviceAccount` is the Stellar account that signs each submitted transaction envelope. `serviceScalar` is the key that owns the pinned notes. Keep `serviceScalar` on the service host.
+
+## Where the implementations live
+
+| Import                                                   | Ships                                                                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `@arcanetech/privacy-sdk-automatization-service`         | `createMemoryPlanStore`, `composePlanStore`, `systemClock`, `createDerivedNoteOwnership`                     |
+| `@arcanetech/privacy-sdk-automatization-service/stellar` | `createStellarNoteDeriver`, `createSorobanPoolReader`, `createKytFeeQuotes`, `createStellarStepTransactions` |
+| `@arcanetech/privacy-sdk-automatization-service/testing` | `createInMemoryPool`, `inMemoryNoteDeriver`                                                                  |
+
+The `/stellar` entry runs on Node.js. See [Wire the Stellar ports](/automatization/guides/backend#wire-the-stellar-ports).
+
+## NoteDeriver
+
+Returns the commitment and nullifier hash of a note plaintext. `compose` calls it for every pinned note, so derive each locked note for the service scalar. `derive` is synchronous because Plan editing calls it on every change.
+
+```ts
+interface NoteDeriver {
+  derive(plaintext: NotePlaintext): NoteDerivation;
+}
+
+interface NoteDerivation {
+  readonly commitment: string;
+  readonly nullifierHash: string;
+}
+```
+
+**SDK implementation:** `createStellarNoteDeriver(config)` from `/stellar`. It derives every note from your service secret and a note salt. Persist the salt: a new salt changes every commitment, so Plans confirmed under the old salt no longer match.
+
+## PlanStore
+
+Keeps confirmed Plans and everything needed to run them. `PlanStore` is seven role interfaces. Each use case takes only the roles it calls.
+
+```ts
+interface PlanRegistry {
+  allocateId(): Promise<string>;
+  ids(): Promise<readonly string[]>;
+}
+
+interface PlanDocuments {
+  savePlan(id: string, plan: Plan): Promise<void>;
+  read(id: string): Promise<Plan>;
+}
+
+interface StepTimes {
+  start(id: string, confirmedAt: bigint): Promise<void>;
+  confirmedAt(id: string): Promise<bigint>;
+  executedAt(id: string, stepKey: string): Promise<bigint | undefined>;
+  rememberExecutedAt(id: string, stepKey: string, at: bigint): Promise<void>;
+}
+
+interface InitialQuotes {
+  acceptedInitialQuote(id: string): Promise<FeeQuote | undefined>;
+  recordAcceptedInitialQuote(id: string, quote: FeeQuote): Promise<void>;
+}
+
+interface PlanCancellation {
+  isCancelled(id: string): Promise<boolean>;
+  cancel(id: string): Promise<void>;
+}
+
+interface DepositMaterial {
+  addDepositAuthorization(
+    id: string,
+    authorization: DepositAuthorization,
+  ): Promise<void>;
+  depositAuthorizations(id: string): Promise<readonly DepositAuthorization[]>;
+  savePreparedDeposit(id: string, prepared: PreparedDeposit): Promise<void>;
+  preparedDeposit(id: string, step: StepPlace): Promise<PreparedDeposit | undefined>;
+  discard(id: string): Promise<void>;
+}
+
+interface UnspentNoteStore {
+  addUnspentNote(id: string, note: StoredUnspentNote): Promise<void>;
+  unspentNotes(id: string): Promise<readonly StoredUnspentNote[]>;
+}
+```
+
+`stepKey` is `${rowIndex}:${role}`. `read` throws `PlanNotFoundError` for an unknown id. `rememberExecutedAt` and `recordAcceptedInitialQuote` keep the first value they receive.
+
+Combine the roles with `composePlanStore`. Its `cancel` marks the Plan cancelled, then calls `discard` to drop the Plan's Deposit authorizations and prepared Deposits.
+
+Each role ships as a memory part. Replace any part with your own:
+
+```ts
+import {
+  composePlanStore,
+  createMemoryDepositMaterial,
+  createMemoryInitialQuotes,
+  createMemoryPlanCancellation,
+  createMemoryPlanDocuments,
+  createMemoryPlanRegistry,
+  createMemoryStepTimes,
+  createMemoryUnspentNotes,
+} from '@arcanetech/privacy-sdk-automatization-service';
+
+const store = composePlanStore({
+  registry: createMemoryPlanRegistry(),
+  documents: createMemoryPlanDocuments(),
+  times: createMemoryStepTimes(),
+  quotes: createMemoryInitialQuotes(),
+  cancellation: createMemoryPlanCancellation(),
+  deposits: createMemoryDepositMaterial(),
+  unspentNotes: createMemoryUnspentNotes(),
+});
+```
+
+<Warning>
+  `composePlanStore` does not wrap calls in a transaction. A `confirm` that fails
+  halfway leaves the rows it already wrote. Run one use case at a time per Plan.
+</Warning>
+
+**SDK implementation:** `createMemoryPlanStore()` keeps everything in memory and numbers ids from `plan-1`. `clear()` empties it. To keep Plans across restarts, see [Persist Plans](/automatization/guides/backend#persist-plans).
+
+## Clock
+
+Returns the current time. Intervals and execution times use the same unit.
+
+```ts
+interface Clock {
+  now(): Promise<bigint>;
+}
+```
+
+**SDK implementation:** `systemClock` returns `Date.now()`, so intervals are milliseconds.
+
+## FeeQuotes
+
+Quotes the fee for one Step. The service skips a Step whose quote is above its Free tokens. A changed quote before the Initial Deposit runs cancels the Plan.
+
+```ts
+interface FeeQuotes {
+  quote(request: FeeQuoteRequest): Promise<FeeQuote>;
+}
+
+interface FeeQuoteRequest {
+  readonly publicDeposit: bigint;
+  readonly valueMoved: bigint;
+  readonly publicWithdrawal: bigint;
+}
+
+interface FeeQuote {
+  readonly amount: bigint;
+  readonly collector: string;
+}
+```
+
+**SDK implementation:** `createKytFeeQuotes(config)` from `/stellar` asks your compliance service for the required fee and caches each quote for one minute.
+
+## CurrentRoot and Presence
+
+`CurrentRoot` returns the pool's current Merkle root. `Presence` reports which pinned nullifier hashes are consumed and which pinned commitments are in the pool tree. `runDueSteps` reads one report for every Plan in the store.
+
+```ts
+interface CurrentRoot {
+  current(): Promise<string>;
+}
+
+interface Presence {
+  report(): Promise<PinnedNotePresence>;
+}
+
+interface PinnedNotePresence {
+  readonly consumedNullifierHashes: readonly string[];
+  readonly outputCommitmentsInPoolTree: readonly string[];
+}
+```
+
+**SDK implementation:** `createSorobanPoolReader(config)` from `/stellar` returns both ports. It reads the pool contract and the pinned notes of every Plan in the store, and caches each read for two seconds. Call `forget()` to read again at once.
+
+## Proofs
+
+Builds the pool transaction for one Step. The request carries the Step's pinned notes, the fee note, the Unspent note, the public amounts, and the recipient.
+
+```ts
+interface Proofs {
+  prove(input: ProofRequest): Promise<TransactInvocation>;
+}
+
+interface ProofRequest {
+  readonly step: Step;
+  readonly quote: FeeQuote;
+  readonly root: string;
+  readonly feeNote: FeeNote;
+  readonly unspentNote?: UnspentNoteShape;
+  readonly publicDeposit: bigint;
+  readonly publicWithdrawal: bigint;
+  readonly recipient: string;
+}
+
+interface TransactInvocation {
+  readonly root: string;
+  readonly pinnedOutputCommitments: readonly string[];
+}
+```
+
+For a Deposit, return the current root and the Step's pinned output commitments. Otherwise `confirm` and `authorizeDeposit` throw `DepositAuthorizationMismatchError`.
+
+**SDK implementation:** `createStellarStepTransactions(config).proofs` from `/stellar`.
+
+## FreshScalars
+
+Returns a new owner scalar for each Unspent note. The service stores the scalar with the note.
+
+```ts
+interface FreshScalars {
+  next(): Promise<string>;
+}
+```
+
+**SDK implementation:** `createStellarStepTransactions(config).freshScalars` from `/stellar`.
+
+## Inspection
+
+Runs the compliance check on a transaction before the service submits it. A refused Step is not submitted.
+
+```ts
+interface Inspection {
+  inspect(invocation: TransactInvocation): Promise<'accept' | 'refuse'>;
+}
+```
+
+**SDK implementation:** `createStellarStepTransactions(config).inspection` from `/stellar`.
+
+## PoolSubmission
+
+Submits a transaction to the pool. For a Deposit, the service passes the depositor's authorization. Return `ok: false` when the pool does not accept it. The Step stays unsubmitted, and the next run tries again.
+
+```ts
+interface PoolSubmission {
+  submit(
+    transaction: ServiceTransaction,
+    authorization?: DepositAuthorization,
+  ): Promise<
+    { readonly ok: true; readonly transactionId: string } | { readonly ok: false }
+  >;
+}
+
+interface ServiceTransaction {
+  readonly envelopeSigner: string;
+  readonly invocation: TransactInvocation;
+}
+
+interface DepositAuthorization {
+  readonly invocation: TransactInvocation;
+  readonly sorobanAuthorization: string;
+}
+```
+
+**SDK implementation:** `createStellarStepTransactions(config).pool` from `/stellar`.
+
+## DepositSigning
+
+Returns the Soroban authorization entries the depositor signs for a Deposit. `depositToSign` calls it after the proof and the compliance check.
+
+```ts
+interface DepositSigning {
+  authEntries(invocation: TransactInvocation): Promise<readonly string[]>;
+}
+```
+
+**SDK implementation:** `createStellarStepTransactions(config).depositSigning` from `/stellar`. Call `setDepositor(account)` first, so the Deposit spends from the depositor's account.
+
+## NoteOwnership
+
+Reports whether the service scalar owns a pinned note. `confirm` calls it for every locked note and throws `UnownedNoteError` when it returns `false`. Notes with no lock are skipped.
+
+```ts
+interface NoteOwnership {
+  isOwnedByServiceScalar(note: PinnedNote, serviceScalar: string): Promise<boolean>;
+}
+```
+
+**SDK implementation:** `createDerivedNoteOwnership(notes, serviceScalar)` derives the note again with your `NoteDeriver` and compares the commitment and nullifier hash.
+
+## Test without a pool
+
+`createInMemoryPool(store)` from `/testing` returns every pool port: `currentRoot`, `presence`, `feeQuotes`, `freshScalars`, `proofs`, `inspection`, `pool`, and `depositSigning`. It accepts every transaction and reports submitted notes as present. Pair it with `inMemoryNoteDeriver`.
+
+```ts
+import {
+  createMemoryPlanStore,
+  systemClock,
+} from '@arcanetech/privacy-sdk-automatization-service';
+import { createInMemoryPool } from '@arcanetech/privacy-sdk-automatization-service/testing';
+
+const store = createMemoryPlanStore();
+const pool = createInMemoryPool(store);
+const steps = { ...pool, clock: systemClock, serviceAccount: 'service-account', store };
+```

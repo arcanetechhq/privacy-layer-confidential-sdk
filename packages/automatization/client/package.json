@@ -1,0 +1,37 @@
+{
+  "name": "@arcanetech/privacy-sdk-automatization-client",
+  "version": "0.0.0",
+  "description": "Client view of a saved Plan: rows, payouts, pinned notes, Free tokens, and executed or blocked Steps",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arcanetechhq/privacy-layer-confidential-sdk.git",
+    "directory": "packages/automatization/client"
+  },
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@arcanetech/privacy-sdk-automatization-plan": "0.0.0",
+    "@stellar/stellar-sdk": "^16.0.1"
+  }
+}

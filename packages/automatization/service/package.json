@@ -1,0 +1,48 @@
+{
+  "name": "@arcanetech/privacy-sdk-automatization-service",
+  "version": "0.0.0",
+  "description": "Compose a Plan and run its Steps behind quote, proof, inspect, and submit ports",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./stellar": {
+      "types": "./dist/stellar/index.d.ts",
+      "node": "./dist/stellar/index.js",
+      "import": "./dist/stellar/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arcanetechhq/privacy-layer-confidential-sdk.git",
+    "directory": "packages/automatization/service"
+  },
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@arcanetech/privacy-sdk-automatization-plan": "0.0.0",
+    "@arcanetech/privacy-sdk-stellar": "0.8.3",
+    "@arcanetech/stellar-privacy-pool-zk-sdk": ">=0.15.0 <1.0.0",
+    "@stellar/stellar-sdk": "^16.0.1"
+  }
+}

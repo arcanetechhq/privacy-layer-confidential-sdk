@@ -80,6 +80,10 @@ export {
   readLeafEphemeralHex,
 } from './merkle/fetch-contract.js';
 export { requestKytPassageForPoolInteraction } from './kyt/passage-inspect.js';
+export { quoteRequiredFee } from './fees/quote-required-fee.js';
+export type { FeeQuote, FeeQuoteRequest } from './fees/quote-request-body.js';
+export { kytAuthorizationScValue } from './escrow/kyt-authorization-sc-value.js';
+export { readTreeLeafCommitments } from './merkle/read-tree-leaves.js';
 export type { RequestKytPassageForPoolInteractionInput } from './kyt/passage-inspect.js';
 export {
   MIN_CONFIDENTIAL_TRANSFER_STROOPS,

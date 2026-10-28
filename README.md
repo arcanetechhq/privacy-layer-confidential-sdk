@@ -14,12 +14,14 @@ English-language monorepo for the Arcane high-level privacy SDK.
 
 ## Packages
 
-| Package                                                                 | Description                                                                                            |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [`@arcanetech/privacy-sdk-core`](./packages/core/README.md)             | Network-agnostic intents, prepared operations, errors, progress events, and adapter contracts          |
-| [`@arcanetech/privacy-sdk-data-layer`](./packages/data-layer/README.md) | Private-record HTTP client. Checks the schemas you pass before it returns records or a completion      |
-| [`@arcanetech/privacy-sdk-relay`](./packages/relay/README.md)           | Chain-agnostic protocol relay runtime (admission, polling, retry, fallback) over caller-supplied ports |
-| [`@arcanetech/privacy-sdk-stellar`](./packages/stellar/README.md)       | Stellar preset with browser and Node entrypoints                                                       |
+| Package                                                                                         | Description                                                                                            |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`@arcanetech/privacy-sdk-automatization-client`](./packages/automatization/client/README.md)   | Plan progress: Rows, Payouts, pinned notes, Free tokens, and executed or blocked Steps                 |
+| [`@arcanetech/privacy-sdk-automatization-plan`](./packages/automatization/plan/README.md)       | Plan document with funded, underfunded, executed, and blocked checks                                   |
+| [`@arcanetech/privacy-sdk-core`](./packages/core/README.md)                                     | Network-agnostic intents, prepared operations, errors, progress events, and adapter contracts          |
+| [`@arcanetech/privacy-sdk-data-layer`](./packages/data-layer/README.md)                         | Private-record HTTP client. Checks the schemas you pass before it returns records or a completion      |
+| [`@arcanetech/privacy-sdk-relay`](./packages/relay/README.md)                                   | Chain-agnostic protocol relay runtime (admission, polling, retry, fallback) over caller-supplied ports |
+| [`@arcanetech/privacy-sdk-stellar`](./packages/stellar/README.md)                               | Stellar preset with browser and Node entrypoints                                                       |
 
 ## Requirements
 
@@ -102,7 +104,7 @@ Publish from a pull request into the branch that owns the line. You do not edit 
 
 | Branch       | Dist-tag     | What you can release                                                                                                                                 |
 | ------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `release/v0` | `release-v0` | Patch and minor fixes for major 0. The Stellar dependency on `@arcanetech/stellar-privacy-pool-zk-sdk` must stay inside major 0 (`>=0.14.0 <1.0.0`). |
+| `release/v0` | `release-v0` | Patch and minor fixes for major 0. The Stellar dependency on `@arcanetech/stellar-privacy-pool-zk-sdk` must stay inside major 0 (`>=0.15.0 <1.0.0`). |
 | `release/v1` | `release-v1` | Patch and minor fixes for major 1. A `major` changeset is rejected.                                                                                  |
 | `main`       | `latest`     | The current major. A major bump applies to every public package.                                                                                     |
 
@@ -119,6 +121,8 @@ Maintainer steps for cutting a new `release/vN`, the `1.0.0` / `1.1.0` split, an
 
 ## Package READMEs
 
+- [Plan progress package README](./packages/automatization/client/README.md)
+- [Plan package README](./packages/automatization/plan/README.md)
 - [Core package README](./packages/core/README.md)
 - [Data-layer package README](./packages/data-layer/README.md)
 - [Relay package README](./packages/relay/README.md)
