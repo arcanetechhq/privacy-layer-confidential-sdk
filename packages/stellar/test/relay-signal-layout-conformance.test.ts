@@ -146,15 +146,15 @@ describe('relay signal-layout vectors', () => {
     expect(profile.indices.stateRoot).toBe(246);
   });
 
-  it('derives the nonce-3 29-signal binding profile', () => {
+  it('derives the nonce-3 30-signal binding profile', () => {
     const profile = relayLayoutProfileForNonce(3n);
-    expect(profile.signalCount).toBe(29);
+    expect(profile.signalCount).toBe(30);
     expect(profile.indices.stateRoot).toBe(16);
   });
 
-  it('derives the nonce-7 57-signal 6x6 binding profile', () => {
+  it('derives the nonce-7 58-signal 6x6 binding profile', () => {
     const profile = relayLayoutProfileForNonce(7n);
-    expect(profile.signalCount).toBe(57);
+    expect(profile.signalCount).toBe(58);
     expect(profile.indices.stateRoot).toBe(44);
   });
 
@@ -203,7 +203,7 @@ describe('relay signal-layout vectors', () => {
     expect(prepared.zkConfigNonce).toBe(2n);
   });
 
-  it('defaults an omitted nonce to binding 29-signal layout', () => {
+  it('defaults an omitted nonce to binding 30-signal layout', () => {
     const poolSelector = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
     const applicationIdHints = ['101', '101', '0', '0'] as const;
     expect(() =>
@@ -213,11 +213,11 @@ describe('relay signal-layout vectors', () => {
         publicSignals: packZeroSignals(vector.signalCount, vector.fieldBytes),
         applicationIdHints: [...applicationIdHints],
       }),
-    ).toThrow(/exactly 29 packed public signals/i);
+    ).toThrow(/exactly 30 packed public signals/i);
     const prepared = prepareRelayTransactPackage({
       poolSelector,
       proofBytes: 'aabb',
-      publicSignals: packZeroSignals(29, vector.fieldBytes),
+      publicSignals: packZeroSignals(30, vector.fieldBytes),
       applicationIdHints: [...applicationIdHints],
     });
     expect(prepared.zkConfigNonce).toBe(3n);

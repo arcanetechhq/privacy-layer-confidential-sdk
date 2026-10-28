@@ -35,8 +35,8 @@ const TRANSFER_CHANGE = 586_000_000n;
 const WITHDRAW_FEE = 2_000_000n;
 const WITHDRAW_CHANGE = 384_000_000n;
 const FIELD_BYTES = 32;
-const BINDING_SIGNAL_COUNT = 29;
-const SIX_BY_SIX_BINDING_SIGNAL_COUNT = 57;
+const BINDING_SIGNAL_COUNT = 30;
+const SIX_BY_SIX_BINDING_SIGNAL_COUNT = 58;
 
 type DepositCall = {
   privateAddressStpl1: string;
