@@ -103,8 +103,61 @@ Each Step shows its pinned input notes. Each Step shows its pinned output notes.
 
 The view has no Service scalar. The view has no Execution material. Fee notes are not inputs. Unspent notes are not inputs. You pass the presence report.
 
+## Ask an automation service
+
+`createPlanClient` sends Stellar accounts and amounts. Floor, interval, pool, asset, and the Service scalar stay on the service. Amounts you pass are `bigint`. The Plan you get back uses `bigint`. Call `coverFees` before you sign a Deposit. It raises any Step whose Fee quote is above its Free tokens.
+
+```ts
+import { createPlanClient } from '@arcanetech/privacy-sdk-automatization-client';
+
+const client = createPlanClient({ baseUrl: automationServiceUrl });
+const plan = await client.compose([
+  { account: 'bob-account', amount: 30n },
+  { account: 'carol-account', amount: 20n },
+]);
+const saved = await client.confirm(plan, sorobanAuthorization);
+const loaded = await client.read(saved.id);
+```
+
+`reviseFreeTokens`, `insertDeposit`, `moveDepositAmount`, and `replaceStepInterval` return the next Plan. `initialDepositInvocation` and `depositToSign` return the root and the pinned output commitments to sign. When the service is submitting to a pool, those calls also return the Soroban auth entries to sign, and `authEntries` is present. A missing deposit-to-sign result means nothing is waiting. `authorizeDeposit` sends the signature. The client does not receive a stored authorization.
+
+## Sign a Deposit
+
+`createSecretDepositSigner` signs with a Stellar secret key. Replace it with your own `DepositSigner` when the page uses a wallet. `depositSigningMessage` is the text both signers cover.
+
+```ts
+import {
+  createSecretDepositSigner,
+  depositSigningMessage,
+} from '@arcanetech/privacy-sdk-automatization-client';
+
+const signer = createSecretDepositSigner({ secretKey });
+const invocation = await client.initialDepositInvocation(plan);
+const message = depositSigningMessage(invocation);
+const sorobanAuthorization = await signer.sign(invocation);
+```
+
+## Read presence and the waiting Deposit
+
+`readPinnedPresence` asks a `PoolView` which pinned nullifiers are consumed and which pinned commitments are in the tree. Pass that report to `planProgress`. `createSorobanPoolView` is one view. Tests can pass another view and open no socket.
+
+`waitingDeposit` returns the row index of the Deposit that still needs a signature. Omit the invocation when nothing is waiting.
+
+```ts
+import {
+  planProgress,
+  readPinnedPresence,
+  waitingDeposit,
+} from '@arcanetech/privacy-sdk-automatization-client';
+
+const presence = await readPinnedPresence(loaded, pool);
+const progress = planProgress(loaded, presence);
+const rowIndex = waitingDeposit(loaded, progress, await client.depositToSign(saved.id));
+```
+
 ## Related docs
 
 - [Plan package README](../plan/README.md)
 - [Root README](../../../README.md)
 - [Packages](../../../docs/overview/packages.mdx)
+- [Offchain automatization](../../../docs/automatization/overview.mdx)

@@ -25,6 +25,7 @@ type ExcludedKey = Extract<
   | 'unspentNote'
   | 'unspentNotes'
   | 'executionMaterial'
+  | 'depositAuthorizations'
   | 'authorization'
   | 'serviceScalar'
 >;

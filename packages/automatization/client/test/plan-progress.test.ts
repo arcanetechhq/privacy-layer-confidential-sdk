@@ -114,7 +114,7 @@ describe('Plan progress', () => {
       pinnedOutputs: [remainder],
       freeTokens: 2n,
     });
-    expect(stepNotes(payout.transfer)).toEqual({
+    expect(stepNotes(transferOf(payout))).toEqual({
       pinnedInputs: [remainder],
       pinnedOutputs: [afterTransfer],
       freeTokens: 1n,
@@ -162,10 +162,10 @@ describe('Executed and blocked Steps', () => {
     const missingNullifierPayout = payoutRow(missingNullifier.rows[0]);
     const missingCommitmentPayout = payoutRow(missingCommitment.rows[0]);
 
-    expect(executedPayout.transfer.executed).toBe(true);
-    expect(executedPayout.transfer.blocked).toBe(false);
-    expect(missingNullifierPayout.transfer.executed).toBe(false);
-    expect(missingCommitmentPayout.transfer.executed).toBe(false);
+    expect(transferOf(executedPayout).executed).toBe(true);
+    expect(transferOf(executedPayout).blocked).toBe(false);
+    expect(transferOf(missingNullifierPayout).executed).toBe(false);
+    expect(transferOf(missingCommitmentPayout).executed).toBe(false);
   });
 
   it('marks a Step with no pinned inputs executed when every pinned output commitment is present', () => {
@@ -215,10 +215,10 @@ describe('Executed and blocked Steps', () => {
     const partialPayout = payoutRow(partial.rows[0]);
     const untouchedPayout = payoutRow(untouched.rows[0]);
 
-    expect(partialPayout.transfer.executed).toBe(false);
-    expect(partialPayout.transfer.blocked).toBe(true);
-    expect(untouchedPayout.transfer.executed).toBe(false);
-    expect(untouchedPayout.transfer.blocked).toBe(false);
+    expect(transferOf(partialPayout).executed).toBe(false);
+    expect(transferOf(partialPayout).blocked).toBe(true);
+    expect(transferOf(untouchedPayout).executed).toBe(false);
+    expect(transferOf(untouchedPayout).blocked).toBe(false);
   });
 
   it('marks executed and blocked from pinned notes alone', () => {
@@ -269,6 +269,13 @@ function payoutRow(row: RowProgress | undefined): PayoutProgress {
     throw new Error('expected a Payout');
   }
   return row;
+}
+
+function transferOf(payout: PayoutProgress): StepProgress {
+  if (payout.transfer === undefined) {
+    throw new Error('expected a Transfer');
+  }
+  return payout.transfer;
 }
 
 function stepNotes(shown: StepProgress): {

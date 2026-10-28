@@ -26,8 +26,8 @@ export interface PayoutProgress {
   readonly kind: 'payout';
   readonly account: string;
   readonly amount: bigint;
-  readonly transfer: StepProgress;
   readonly withdrawal: StepProgress;
+  readonly transfer?: StepProgress;
 }
 
 export type RowProgress = DepositProgress | PayoutProgress;
@@ -58,8 +58,10 @@ function rowProgress(row: Row, report: PinnedNotePresence): RowProgress {
     kind: 'payout',
     account: row.account,
     amount: row.amount,
-    transfer: stepProgress(row.transfer, report),
     withdrawal: stepProgress(row.withdrawal, report),
+    ...(row.transfer === undefined
+      ? {}
+      : { transfer: stepProgress(row.transfer, report) }),
   };
 }
 
