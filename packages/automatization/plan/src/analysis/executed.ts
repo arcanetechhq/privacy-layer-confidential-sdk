@@ -1,4 +1,4 @@
-import type { Step } from './document.js';
+import type { Step } from '../document/index.js';
 
 export interface PinnedNotePresence {
   readonly consumedNullifierHashes: readonly string[];

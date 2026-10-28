@@ -1,4 +1,4 @@
-import type { Plan } from './document.js';
+import type { Plan } from '../document/index.js';
 import { stepsInRow } from './steps-in-row.js';
 
 function totalDeposits(plan: Plan): bigint {

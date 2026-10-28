@@ -1,17 +1,10 @@
-import type { Plan, Row, Step } from './document.js';
+import type { Plan, Row, Step } from '../document/index.js';
+import { pinnedOutputAmount } from './pinned-output-amount.js';
 import { stepsInRow } from './steps-in-row.js';
 
 interface CreatedNote {
   readonly commitment: string;
   readonly amount: bigint;
-}
-
-function pinnedOutputAmount(step: Step): bigint {
-  let total = 0n;
-  for (const output of step.pinnedOutputs) {
-    total += output.plaintext.amount;
-  }
-  return total;
 }
 
 function depositOnThisRow(row: Row): bigint {

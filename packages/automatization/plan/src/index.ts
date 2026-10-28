@@ -1,12 +1,20 @@
 export type {
   Deposit,
+  DepositInvocation,
   NotePlaintext,
   Payout,
   PinnedNote,
   Plan,
   Row,
   Step,
-} from './document.js';
-export { isBlockedStep, isExecutedStep, type PinnedNotePresence } from './executed.js';
-export { isFundedPlan } from './funded.js';
-export { underfundedSteps } from './underfunded.js';
+} from './document/index.js';
+export { planToJson, restorePlanValue } from './serialization/index.js';
+export {
+  isBlockedStep,
+  isExecutedStep,
+  isFundedPlan,
+  pinnedOutputAmount,
+  stepsInRow,
+  underfundedSteps,
+  type PinnedNotePresence,
+} from './analysis/index.js';

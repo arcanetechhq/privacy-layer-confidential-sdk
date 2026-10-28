@@ -79,7 +79,7 @@ describe('Plan document', () => {
     expect(deposit.step.pinnedOutputs[0]?.nullifierHash).toBe('nullifier-remainder');
     expect(payout.account).toBe('bob-account');
     expect(payout.amount).toBe(30n);
-    expect(payout.transfer.interval).toBe(5n);
+    expect(payout.transfer?.interval).toBe(5n);
     expect(payout.transfer).not.toHaveProperty('transactionId');
     expect(payout.withdrawal.transactionId).toBe('tx-withdraw');
   });

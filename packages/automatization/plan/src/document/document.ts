@@ -27,8 +27,8 @@ export interface Payout {
   readonly kind: 'payout';
   readonly account: string;
   readonly amount: bigint;
-  readonly transfer: Step;
   readonly withdrawal: Step;
+  readonly transfer?: Step;
 }
 
 export type Row = Deposit | Payout;

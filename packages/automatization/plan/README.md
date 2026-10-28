@@ -102,3 +102,4 @@ Fee notes and Unspent notes are not stored on the Plan. They are not part of the
 
 - [Root README](../../../README.md)
 - [Packages](../../../docs/overview/packages.mdx)
+- [Offchain automatization](../../../docs/automatization/overview.mdx)
