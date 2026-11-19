@@ -58,7 +58,6 @@ export async function registerPrivateAddressWithEnvironment(input: {
   owner: StellarAddress;
   walletPublicKey: string;
   privateAddressStpl1: string;
-  spendScalarHex: string;
 }): Promise<StellarTransactionStatus> {
   const environment = requireNetworkEnvironment(input.transactEnvironment);
   const contractContext = requireContractContext(environment);
@@ -67,7 +66,6 @@ export async function registerPrivateAddressWithEnvironment(input: {
     owner: input.owner,
     walletPublicKey: input.walletPublicKey,
     privateAddressStpl1: input.privateAddressStpl1,
-    spendScalarHex: input.spendScalarHex,
   });
   return {
     txHash,

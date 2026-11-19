@@ -151,6 +151,13 @@ export interface EphemeralKeyCoords {
   y: Buffer;
 }
 
+export interface AuditSlotEventPayload {
+  ciphertext: Buffer;
+  ephemeral_x: Buffer;
+  ephemeral_y: Buffer;
+  tag: Buffer;
+}
+
 export interface OutputNoteEventPayload {
   ciphertext: Buffer;
   ephemeral_x: Buffer;

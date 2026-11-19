@@ -14,11 +14,6 @@ export type RegistryContractWriteClient = RegistryContractReadClient & {
     owner: string;
     public_key_x: Buffer;
     public_key_y: Buffer;
-    signature: {
-      r8_x: Buffer;
-      r8_y: Buffer;
-      s: Buffer;
-    };
   }) => Promise<{
     signAndSend: () => Promise<{
       sendTransactionResponse?: {
