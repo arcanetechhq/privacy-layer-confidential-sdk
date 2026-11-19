@@ -54,7 +54,7 @@ Preserve private-address data, private records, and unresolved transaction state
 
 The example's account setup derives test accounts, funds them on Stellar testnet, and registers their private addresses.
 
-[The registration flow](https://github.com/arcanetechhq/pl-backend-sdk-demo/blob/main/src/privacy/operations/privacy-job-runner.ts) signs an SDK-generated message on the server, derives and saves the private address, and calls `registerPrivateAddress`. It then checks registration with `checkRegistrationStatus`.
+[The registration flow](https://github.com/arcanetechhq/pl-backend-sdk-demo/blob/main/src/privacy/operations/privacy-job-runner.ts) signs an SDK-generated message on the server, derives and saves the private address, and calls `registerPrivateAddress`. Pass the spend scalar; the SDK attaches the registration signature. It then checks registration with `checkRegistrationStatus`.
 
 Your application can supply its own signer. Keep message signing and transaction signing tied to the same account. This account registration is separate from registering your application.
 

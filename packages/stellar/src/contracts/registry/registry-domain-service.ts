@@ -1,4 +1,6 @@
 import { Buffer } from 'buffer';
+import { StrKey } from '@stellar/stellar-sdk';
+import { signPrivateAddressRegistration } from '@arcanetech/stellar-privacy-pool-zk-sdk';
 import type { StellarAddress, StellarRegistryLookup } from '../../types.js';
 import {
   decodePrivateAddress,
@@ -100,23 +102,53 @@ export async function readRegistryLookupFromChain(input: {
   return recordToLookupResult(record);
 }
 
+function payloadHex(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString('hex').padStart(COORDINATE_HEX_LENGTH, '0');
+}
+
+function sameCoordinate(left: string, right: string): boolean {
+  return (
+    left.padStart(COORDINATE_HEX_LENGTH, '0').toLowerCase() ===
+    right.padStart(COORDINATE_HEX_LENGTH, '0').toLowerCase()
+  );
+}
+
 export async function registerPrivateAddressOnChain(input: {
   contractContext: StellarContractContext;
   owner: StellarAddress;
   walletPublicKey: string;
   privateAddressStpl1: string;
+  spendScalarHex: string;
 }): Promise<string> {
+  const owner = input.owner.trim();
+  const registryContract = input.contractContext.network.registryContract.trim();
   const decoded = decodePrivateAddress(input.privateAddressStpl1.trim());
+  const signature = await signPrivateAddressRegistration(
+    input.spendScalarHex.trim(),
+    payloadHex(StrKey.decodeEd25519PublicKey(owner)),
+    payloadHex(StrKey.decodeContract(registryContract)),
+  );
+  if (
+    !sameCoordinate(signature.publicKeyXHex, decoded.x) ||
+    !sameCoordinate(signature.publicKeyYHex, decoded.y)
+  ) {
+    throw new Error('Private address does not match the spend scalar.');
+  }
   const client = input.contractContext.createRegistryClient({
-    contractId: input.contractContext.network.registryContract,
+    contractId: registryContract,
     walletPublicKey: input.walletPublicKey,
     networkPassphrase: input.contractContext.network.networkPassphrase,
     sorobanRpcUrl: input.contractContext.network.rpcUrl,
   });
   const assembled = await client.register_private_address({
-    owner: input.owner.trim(),
+    owner,
     public_key_x: Buffer.from(decoded.x.padStart(COORDINATE_HEX_LENGTH, '0'), 'hex'),
     public_key_y: Buffer.from(decoded.y.padStart(COORDINATE_HEX_LENGTH, '0'), 'hex'),
+    signature: {
+      r8_x: Buffer.from(signature.r8XHex, 'hex'),
+      r8_y: Buffer.from(signature.r8YHex, 'hex'),
+      s: Buffer.from(signature.sHex, 'hex'),
+    },
   });
   await runTtlPreflight(assembled);
   const sent = await assembled.signAndSend();

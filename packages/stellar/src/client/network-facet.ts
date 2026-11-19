@@ -64,12 +64,14 @@ function createRegistryNetworkFacet(input: {
       owner: StellarAddress;
       walletPublicKey: string;
       privateAddressStpl1: string;
+      spendScalarHex: string;
     }) =>
       registerPrivateAddressWithEnvironment({
         transactEnvironment,
         owner: registrationInput.owner,
         walletPublicKey: registrationInput.walletPublicKey,
         privateAddressStpl1: registrationInput.privateAddressStpl1,
+        spendScalarHex: registrationInput.spendScalarHex,
       }),
 
     resolveTransferRecipient: (recipientInput: {
