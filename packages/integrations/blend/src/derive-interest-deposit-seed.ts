@@ -1,3 +1,5 @@
+import { bufferSource } from './buffer-source.js';
+
 const POSITION_SALT = new TextEncoder().encode('arcane-blend-position-v1');
 const CONTRACT_ID_BYTES = 32;
 const CHAIN_INDEX_BYTES = 4;
@@ -10,14 +12,19 @@ export async function deriveInterestDepositSeed(input: {
 }): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey(
     'raw',
-    bytes(input.spendScalar),
+    bufferSource(input.spendScalar),
     'HKDF',
     false,
     ['deriveBits'],
   );
   const info = positionInfo(input);
   const bits = await crypto.subtle.deriveBits(
-    { name: 'HKDF', hash: 'SHA-256', salt: POSITION_SALT, info },
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: bufferSource(POSITION_SALT),
+      info: bufferSource(info),
+    },
     key,
     256,
   );
@@ -29,15 +36,12 @@ function positionInfo(input: {
   tokenContractId: Uint8Array;
   chainIndex: number;
 }): Uint8Array {
-  const info = new Uint8Array(
+  const infoBuffer = new ArrayBuffer(
     CONTRACT_ID_BYTES + CONTRACT_ID_BYTES + CHAIN_INDEX_BYTES,
   );
+  const info = new Uint8Array(infoBuffer);
   info.set(input.blendPoolContractId, 0);
   info.set(input.tokenContractId, CONTRACT_ID_BYTES);
-  new DataView(info.buffer).setUint32(CONTRACT_ID_BYTES * 2, input.chainIndex, false);
+  new DataView(infoBuffer).setUint32(CONTRACT_ID_BYTES * 2, input.chainIndex, false);
   return info;
-}
-
-function bytes(value: Uint8Array): Uint8Array {
-  return new Uint8Array(value);
 }

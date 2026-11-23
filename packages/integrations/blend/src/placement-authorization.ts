@@ -1,4 +1,5 @@
 import { SIX_BY_SIX_BINDING_ZK_NONCE } from '@arcanetech/privacy-sdk-stellar/transact';
+import { bufferSource } from './buffer-source.js';
 
 const FIELD_BYTES = 32;
 
@@ -18,7 +19,7 @@ export async function placementAuthorization(input: {
     input.publicSignals,
     input.stateRootIndex,
   );
-  const hash = await crypto.subtle.digest('SHA-256', bytes(signedSignals));
+  const hash = await crypto.subtle.digest('SHA-256', bufferSource(signedSignals));
   return {
     zkConfigNonce: SIX_BY_SIX_BINDING_ZK_NONCE,
     signedSignals,
@@ -31,8 +32,9 @@ function encodeNormalizedSignals(
   publicSignals: readonly Uint8Array[],
   stateRootIndex: number,
 ): Uint8Array {
-  const encoded = new Uint8Array(4 + publicSignals.length * FIELD_BYTES);
-  new DataView(encoded.buffer).setUint32(0, publicSignals.length, false);
+  const encodedBuffer = new ArrayBuffer(4 + publicSignals.length * FIELD_BYTES);
+  const encoded = new Uint8Array(encodedBuffer);
+  new DataView(encodedBuffer).setUint32(0, publicSignals.length, false);
   for (const [index, signal] of publicSignals.entries()) {
     if (index === stateRootIndex) {
       continue;
