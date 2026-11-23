@@ -7,7 +7,8 @@
   "workspaces": [
     "packages/*",
     "packages/state/*",
-    "packages/automatization/*"
+    "packages/automatization/*",
+    "packages/integrations/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
