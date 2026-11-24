@@ -11,4 +11,5 @@ export { placementAuthorization } from './placement-authorization.js';
 export type { PlacementAuthorization } from './placement-authorization.js';
 export { placementTransaction } from './placement-transaction.js';
 export type { PlacementTransaction } from './placement-transaction.js';
+export { signRelayPlacement } from './placement-fee.js';
 export { underlyingFromShares } from './underlying.js';

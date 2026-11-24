@@ -21,7 +21,7 @@ export interface PlacementTransaction {
   underlying: bigint;
 }
 
-export async function placementTransaction(input: {
+export interface PlacementTransactionInput {
   spendScalar: Uint8Array;
   blendPoolContractId: Uint8Array;
   tokenContractId: Uint8Array;
@@ -35,13 +35,18 @@ export async function placementTransaction(input: {
   poolContractId: string;
   relayAccount: string;
   networkPassphrase: string;
+  sourceSequence: string;
   signatureExpirationLedger: number;
   kytExpirationLedger: number;
   kytSignature: Uint8Array;
   applicationIdHints: string[];
   recordedShares: bigint;
   exchangeRate: bigint;
-}): Promise<PlacementTransaction> {
+}
+
+export async function placementTransaction(
+  input: PlacementTransactionInput,
+): Promise<PlacementTransaction> {
   const seed = await deriveInterestDepositSeed({
     spendScalar: input.spendScalar,
     blendPoolContractId: input.blendPoolContractId,

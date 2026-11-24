@@ -21,6 +21,7 @@ import {
   placementAuthorization,
   placementTransaction,
   saveInterestDeposit,
+  signRelayPlacement,
   underlyingFromShares,
 } from '../src/index.js';
 
@@ -41,7 +42,10 @@ const PLACED_AMOUNT = 10n;
 const PROOF = utf8('placement-proof-not-in-the-signature');
 const REBUILT_PROOF = utf8('placement-proof-rebuilt-for-a-new-root');
 const CIPHERTEXT = field(8);
-const RELAY_ACCOUNT = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 9)).publicKey();
+const RELAY_SEED = Buffer.alloc(32, 9);
+const RELAY_ACCOUNT = Keypair.fromRawEd25519Seed(RELAY_SEED).publicKey();
+const RELAY_SECRET = Keypair.fromRawEd25519Seed(RELAY_SEED).secret();
+const RELAY_ACCOUNT_SEQUENCE = '42';
 const WALLET_ACCOUNT = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 8)).publicKey();
 const ADAPTER = StrKey.encodeContract(Buffer.alloc(32, 4));
 const BLEND_POOL_ADDRESS = StrKey.encodeContract(Buffer.from(BLEND_POOL));
@@ -155,6 +159,58 @@ describe('one Interest Deposit placement', () => {
     );
     expect(placed.relay.proofBytes).toBe(PROOF.toString('hex'));
   });
+
+  it('submits one relay-signed placement that creates the G and deposits', async () => {
+    const unsigned = await placementTransaction(placementInput(PROOF, 9));
+    const transaction = TransactionBuilder.fromXDR(unsigned.envelope, NETWORK);
+    expect(transaction.sequence).toBe('43');
+    expect(transaction.signatures).toHaveLength(0);
+    expect(transaction.operations.map((operation) => operation.type)).toEqual([
+      'createAccount',
+      'invokeHostFunction',
+    ]);
+    expect(createdAccount(unsigned.envelope)).toEqual({
+      destination: CHAIN_INDEX_0_ACCOUNT,
+      startingBalance: '1.0000000',
+    });
+    expect(transferCall(unsigned.envelope)).toEqual({
+      contract: RESERVE_ADDRESS,
+      functionName: 'transfer',
+      from: CHAIN_INDEX_0_ACCOUNT,
+      to: ADAPTER,
+      amount: '10',
+    });
+
+    const relayKyt = Buffer.alloc(64, 9);
+    const signed = signRelayPlacement({
+      envelope: unsigned.envelope,
+      relaySecret: RELAY_SECRET,
+      sourceSequence: '100',
+      networkPassphrase: NETWORK,
+      kytExpirationLedger: 77,
+      kytSignature: relayKyt,
+    });
+    const submitted = TransactionBuilder.fromXDR(signed, NETWORK);
+    const signature = submitted.signatures[0]?.signature();
+    expect(submitted.sequence).toBe('101');
+    expect(submitted.source).toBe(RELAY_ACCOUNT);
+    expect(signature).toBeTruthy();
+    expect(
+      Keypair.fromSecret(RELAY_SECRET).verify(
+        submitted.hash(),
+        signature ?? Buffer.alloc(0),
+      ),
+    ).toBe(true);
+    const call = depositCall(signed);
+    expect(call.functionName).toBe('deposit');
+    expect(call.hostFunction.includes(relayKyt)).toBe(true);
+    expect(call.authorization.includes(relayKyt)).toBe(false);
+    expect(
+      call.authorization.equals(depositCall(unsigned.envelope).authorization),
+    ).toBe(true);
+    expect(call.hostFunction.includes(PROOF)).toBe(true);
+    expect(envelopeBytes(signed).includes(rawPublicKey(WALLET_ACCOUNT))).toBe(false);
+  });
 });
 
 function field(value: number): Uint8Array {
@@ -188,6 +244,7 @@ function placementInput(proof: Buffer, stateRoot: number) {
     applicationIdHints: ['1', '1', '0', '0'],
     recordedShares: 42n,
     exchangeRate: 2_000_000_000_000n,
+    sourceSequence: RELAY_ACCOUNT_SEQUENCE,
   };
 }
 
@@ -233,6 +290,57 @@ function envelopeBytes(envelope: string): Buffer {
   return Buffer.from(envelope, 'base64');
 }
 
+function createdAccount(envelope: string): {
+  destination: string;
+  startingBalance: string;
+} {
+  const transaction = TransactionBuilder.fromXDR(envelope, NETWORK);
+  const operation = transaction.operations.find(
+    (item) => item.type === 'createAccount',
+  );
+  if (!operation || operation.type !== 'createAccount') {
+    throw new Error('Placement envelope does not create the G account');
+  }
+  return {
+    destination: operation.destination,
+    startingBalance: operation.startingBalance,
+  };
+}
+
+function transferCall(envelope: string): {
+  contract: string;
+  functionName: string;
+  from: string;
+  to: string;
+  amount: string;
+} {
+  const invocation = depositEntry(envelope).rootInvocation().subInvocations()[0];
+  if (!invocation) {
+    throw new Error('Placement authorization has no transfer');
+  }
+  const invoked = invocation.function().contractFn();
+  const args = invoked.args();
+  return {
+    contract: Address.fromScAddress(invoked.contractAddress()).toString(),
+    functionName: invoked.functionName().toString(),
+    from: Address.fromScVal(args[0]!).toString(),
+    to: Address.fromScVal(args[1]!).toString(),
+    amount: args[2]!.i128().lo().toString(),
+  };
+}
+
+function depositEntry(envelope: string): xdr.SorobanAuthorizationEntry {
+  const transaction = TransactionBuilder.fromXDR(envelope, NETWORK);
+  const operation = transaction.operations.find(
+    (item) => item.type === 'invokeHostFunction',
+  ) as { auth?: xdr.SorobanAuthorizationEntry[] } | undefined;
+  const entry = operation?.auth?.[0];
+  if (!entry) {
+    throw new Error('Placement envelope has no authorization');
+  }
+  return entry;
+}
+
 function envelopeSource(envelope: string): string {
   return TransactionBuilder.fromXDR(envelope, NETWORK).source;
 }
@@ -244,7 +352,9 @@ function depositCall(envelope: string): {
   authorization: Buffer;
 } {
   const transaction = TransactionBuilder.fromXDR(envelope, NETWORK);
-  const operation = transaction.operations[0] as {
+  const operation = transaction.operations.find(
+    (item) => item.type === 'invokeHostFunction',
+  ) as {
     type: string;
     func: xdr.HostFunction;
     auth: xdr.SorobanAuthorizationEntry[];
@@ -264,7 +374,9 @@ function depositCall(envelope: string): {
 
 function signatureVerifies(envelope: string): boolean {
   const transaction = TransactionBuilder.fromXDR(envelope, NETWORK);
-  const operation = transaction.operations[0] as {
+  const operation = transaction.operations.find(
+    (item) => item.type === 'invokeHostFunction',
+  ) as {
     auth: xdr.SorobanAuthorizationEntry[];
   };
   const entry = operation.auth[0];

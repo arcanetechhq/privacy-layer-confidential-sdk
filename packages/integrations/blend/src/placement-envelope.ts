@@ -12,7 +12,7 @@ import { Buffer } from 'buffer';
 
 const ENVELOPE_FEE = '100';
 const ENVELOPE_TIMEOUT_SECONDS = 30;
-const SOURCE_SEQUENCE = '0';
+const CREATE_ACCOUNT_STARTING_BALANCE = '1';
 
 export async function buildPlacementEnvelope(input: {
   seed: Uint8Array;
@@ -27,6 +27,7 @@ export async function buildPlacementEnvelope(input: {
   publicSignals: Uint8Array;
   relayAccount: string;
   networkPassphrase: string;
+  sourceSequence: string;
   signatureExpirationLedger: number;
   kytExpirationLedger: number;
   kytSignature: Uint8Array;
@@ -37,11 +38,17 @@ export async function buildPlacementEnvelope(input: {
     invocation: depositAuthorization(input),
     networkPassphrase: input.networkPassphrase,
   });
-  const source = new Account(input.relayAccount, SOURCE_SEQUENCE);
+  const source = new Account(input.relayAccount, input.sourceSequence);
   return new TransactionBuilder(source, {
     fee: ENVELOPE_FEE,
     networkPassphrase: input.networkPassphrase,
   })
+    .addOperation(
+      Operation.createAccount({
+        destination: input.account,
+        startingBalance: CREATE_ACCOUNT_STARTING_BALANCE,
+      }),
+    )
     .addOperation(depositOperation(input, authorization))
     .setTimeout(ENVELOPE_TIMEOUT_SECONDS)
     .build()
