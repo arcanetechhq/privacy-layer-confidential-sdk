@@ -19,7 +19,11 @@ export function publicSignalFields(publicSignals: string): Uint8Array[] {
   );
 }
 
-export function publicWithdrawalRelayPackage(input: {
+export function publicSignalBytes(publicSignals: string): Uint8Array {
+  return Buffer.from(publicSignals.replace(/^0x/iu, ''), 'hex');
+}
+
+export function interestDepositRelayPackage(input: {
   poolContractId: string;
   proof: Uint8Array;
   publicSignals: string;

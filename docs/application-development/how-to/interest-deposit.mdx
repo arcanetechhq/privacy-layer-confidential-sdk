@@ -1,0 +1,111 @@
+---
+title: Interest Deposit
+description: Place private notes into a whitelisted reserve and return the underlying
+---
+
+Place private notes into a whitelisted reserve. Return the underlying to a private address. The relay pays the public-withdrawal fee and creates the deposit account. Your main account is not a signer.
+
+## Register the records
+
+Register the records once, after you create the client. Save the chain index, the G address, the Blend pool, and the reserve. Do not store the share balance. Read it from the Adapter when you display the underlying amount.
+
+```ts
+import {
+  bindBlendInterestDeposits,
+  saveInterestDeposit,
+} from '@arcanetech/privacy-sdk-blend';
+
+bindBlendInterestDeposits(client.state.bridge);
+
+await saveInterestDeposit(client.state.bridge, {
+  chainIndex: 0,
+  account: 'G...',
+  blendPool: 'C...',
+  reserve: 'C...',
+});
+```
+
+## Place one deposit
+
+Derive the next free account. Prepare the pool withdrawal, then pass its artifacts to `placementTransaction`. The relay pays the public-withdrawal fee and creates the account.
+
+```ts
+import {
+  nextInterestDeposit,
+  placementTransaction,
+} from '@arcanetech/privacy-sdk-blend';
+
+const next = await nextInterestDeposit({
+  spendScalar,
+  blendPoolContractId,
+  tokenContractId,
+  recorded,
+});
+
+const placement = await placementTransaction({
+  spendScalar,
+  blendPoolContractId,
+  tokenContractId,
+  chainIndex: next.chainIndex,
+  amount,
+  publicSignals,
+  ciphertext,
+  proof,
+  adapterContractId,
+  blendPool,
+  reserve,
+  poolContractId,
+  relayAccount,
+  networkPassphrase,
+  sourceSequence,
+  signatureExpirationLedger,
+  kytExpirationLedger,
+  kytSignature,
+  applicationIdHints,
+  recordedShares,
+  exchangeRate,
+});
+```
+
+## Return one deposit
+
+Prepare a pool deposit whose `from` is the Adapter and whose fee follows the public-withdrawal schedule. Sign with the spend scalar that owns that chain index. The relay account is the envelope source.
+
+```ts
+import { returnTransaction } from '@arcanetech/privacy-sdk-blend';
+
+const returned = await returnTransaction({
+  legs: [{ spendScalar, chainIndex, amount }],
+  blendPoolContractId,
+  tokenContractId,
+  publicSignals,
+  ciphertext,
+  proof,
+  adapterContractId,
+  blendPool,
+  reserve,
+  poolContractId,
+  relayAccount,
+  networkPassphrase,
+  sourceSequence,
+  signatureExpirationLedger,
+  kytExpirationLedger,
+  kytSignature,
+  applicationIdHints,
+});
+```
+
+## Restore the list
+
+Scan when the overview opens. A zero share balance still belongs on the list. The scan stops at the first index with no Adapter record.
+
+```ts
+import { restoreInterestDeposits } from '@arcanetech/privacy-sdk-blend';
+
+const deposits = await restoreInterestDeposits({
+  spendScalars,
+  markets: [{ blendPoolContractId, tokenContractId, exchangeRate }],
+  recorded,
+  shares,
+});
+```

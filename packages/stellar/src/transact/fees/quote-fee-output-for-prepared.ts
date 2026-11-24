@@ -11,23 +11,25 @@ function instructedMinorUnits(prepared: StellarPreparedOperation): string {
   return prepared.intent.amount.toString();
 }
 
-function quoteRequestForPrepared(input: {
+const PUBLIC_WITHDRAWAL_FEE = 'public-withdrawal';
+
+function feeQuoteRequestForPrepared(input: {
   prepared: StellarPreparedOperation;
   tokenAddress: string;
 }) {
   const amount = instructedMinorUnits(input.prepared);
+  if (chargesPublicWithdrawalFee(input.prepared)) {
+    return {
+      feeAsset: input.tokenAddress,
+      publicWithdrawalAmount: amount,
+      spendsNotes: true,
+    };
+  }
   if (input.prepared.kind === 'deposit') {
     return {
       feeAsset: input.tokenAddress,
       publicDepositAmount: amount,
       spendsNotes: false,
-    };
-  }
-  if (input.prepared.kind === 'withdraw') {
-    return {
-      feeAsset: input.tokenAddress,
-      publicWithdrawalAmount: amount,
-      spendsNotes: true,
     };
   }
   return {
@@ -47,7 +49,7 @@ export async function quoteFeeOutputForPrepared(input: {
   }
   const quote = await quoteRequiredFee({
     transactEnvironment: input.environment,
-    request: quoteRequestForPrepared(input),
+    request: feeQuoteRequestForPrepared(input),
   });
   if (quote.requiredFee <= 0n) {
     return undefined;
@@ -56,6 +58,14 @@ export async function quoteFeeOutputForPrepared(input: {
     requiredFee: quote.requiredFee,
     feeCollectorPrivateAddress: quote.feeCollectorPrivateAddress,
   };
+}
+
+function chargesPublicWithdrawalFee(prepared: StellarPreparedOperation): boolean {
+  if (prepared.kind === 'withdraw') {
+    return true;
+  }
+  const schedule = (prepared.intent as { feeSchedule?: string }).feeSchedule;
+  return prepared.kind === 'deposit' && schedule === PUBLIC_WITHDRAWAL_FEE;
 }
 
 export function remainingAfterRequiredFee(input: {

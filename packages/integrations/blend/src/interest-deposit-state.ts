@@ -61,6 +61,10 @@ export const blendInterestDepositDefinitions: StateBridgeDefinition[] = [
   },
 ];
 
+export function bindBlendInterestDeposits(bridge: Pick<StateBridge, 'register'>): void {
+  bridge.register(blendInterestDepositDefinitions);
+}
+
 export async function saveInterestDeposit(
   bridge: StateBridge,
   record: InterestDeposit,

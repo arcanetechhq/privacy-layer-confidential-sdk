@@ -6,7 +6,8 @@ import { placementAuthorization } from './placement-authorization.js';
 import {
   assertPublicWithdrawalPays,
   publicSignalFields,
-  publicWithdrawalRelayPackage,
+  interestDepositRelayPackage,
+  publicSignalBytes,
   SIX_BY_SIX_BINDING_STATE_ROOT_INDEX,
 } from './placement-signals.js';
 import { underlyingFromShares } from './underlying.js';
@@ -53,7 +54,7 @@ export async function placementTransaction(
     chainIndex: input.chainIndex,
   });
   const account = interestDepositAccount(seed);
-  const relay = publicWithdrawalRelayPackage(input);
+  const relay = interestDepositRelayPackage(input);
   assertPublicWithdrawalPays({ relay, account, amount: input.amount });
   const authorization = await placementAuthorization({
     publicSignals: publicSignalFields(input.publicSignals),
@@ -65,7 +66,7 @@ export async function placementTransaction(
     seed,
     account,
     signedSignals: authorization.signedSignals,
-    publicSignals: signalBytes(input.publicSignals),
+    publicSignals: publicSignalBytes(input.publicSignals),
   });
   return {
     chainIndex: input.chainIndex,
@@ -74,8 +75,4 @@ export async function placementTransaction(
     relay,
     underlying: underlyingFromShares(input.recordedShares, input.exchangeRate),
   };
-}
-
-function signalBytes(publicSignals: string): Uint8Array {
-  return Buffer.from(publicSignals.replace(/^0x/iu, ''), 'hex');
 }

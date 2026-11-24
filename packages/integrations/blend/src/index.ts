@@ -12,12 +12,21 @@ export type {
   NextInterestDepositInput,
 } from './next-interest-deposit.js';
 export { interestDepositAccount } from './interest-deposit-account.js';
+export { owningSpendScalar } from './owning-spend-scalar.js';
 export {
+  bindBlendInterestDeposits,
   blendInterestDepositDefinitions,
   interestDepositSchema,
   listInterestDeposits,
   saveInterestDeposit,
 } from './interest-deposit-state.js';
+export {
+  readInterestDepositUnderlying,
+  readPositionRecorded,
+  readPositionShares,
+  readRelayClock,
+  readReserveExchangeRate,
+} from './chain-read.js';
 export type { InterestDeposit } from './interest-deposit-state.js';
 export { placementAuthorization } from './placement-authorization.js';
 export type { PlacementAuthorization } from './placement-authorization.js';

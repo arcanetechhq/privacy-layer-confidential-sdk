@@ -1,9 +1,108 @@
-# @arcanetech/privacy-sdk-blend
+# Interest Deposit
 
-Place one Interest Deposit from private notes into a whitelisted Blend reserve, and return it to a private address.
+Place private notes into a whitelisted reserve, and return that underlying to a private address.
 
-Derive the G address from the spend scalar, the Blend pool, the token, and the chain index. `placementTransaction` signs the public signals with `stateRoot` zeroed and signs the ciphertext. Leave the proof bytes out of that signature. The public-withdrawal relay package pays that account, and the adapter `deposit` call carries the proof. Record the Interest Deposit as the chain index, the G address, the Blend pool, and the reserve. Read the share balance from the Adapter and convert it to underlying with the Blend exchange rate.
+## Register the records
 
-`returnTransaction` accepts a list. Each G signs that same list and the same normalized signals. The envelope source is the relay. A zero record stays recorded, so the next placement takes a new chain index.
+Register Interest Deposit records on the state bridge when you create the client. Save the chain index, the G address, the Blend pool, and the reserve. Read the share balance from the Adapter when you show the underlying amount.
 
-`restoreInterestDeposits` walks every spend scalar, Blend pool, and token. For each chain it derives index 0, then 1, then 2, and reads `recorded` and `shares` from the Adapter. A zero share balance stays in the list. The walk stops at the first index with no Adapter record. The underlying comes from those shares and the Blend exchange rate. The contract does not store the chain index.
+```ts
+import {
+  bindBlendInterestDeposits,
+  saveInterestDeposit,
+} from '@arcanetech/privacy-sdk-blend';
+
+bindBlendInterestDeposits(client.state.bridge);
+
+await saveInterestDeposit(client.state.bridge, {
+  chainIndex: 0,
+  account: 'G...',
+  blendPool: 'C...',
+  reserve: 'C...',
+});
+```
+
+## Place one deposit
+
+Derive the next free account for the spend scalar, the Blend pool, and the token. Prepare the pool withdrawal first. Pass its artifacts to `placementTransaction`. The relay pays the public-withdrawal fee and creates the account.
+
+```ts
+import {
+  nextInterestDeposit,
+  placementTransaction,
+} from '@arcanetech/privacy-sdk-blend';
+
+const next = await nextInterestDeposit({
+  spendScalar,
+  blendPoolContractId,
+  tokenContractId,
+  recorded,
+});
+
+const placement = await placementTransaction({
+  spendScalar,
+  blendPoolContractId,
+  tokenContractId,
+  chainIndex: next.chainIndex,
+  amount,
+  publicSignals,
+  ciphertext,
+  proof,
+  adapterContractId,
+  blendPool,
+  reserve,
+  poolContractId,
+  relayAccount,
+  networkPassphrase,
+  sourceSequence,
+  signatureExpirationLedger,
+  kytExpirationLedger,
+  kytSignature,
+  applicationIdHints,
+  recordedShares,
+  exchangeRate,
+});
+```
+
+## Return one deposit
+
+Prepare a pool deposit whose `from` is the Adapter and whose fee follows the public-withdrawal schedule. Sign `returnTransaction` with the spend scalar that owns that chain index. The relay account is the envelope source.
+
+```ts
+import { returnTransaction } from '@arcanetech/privacy-sdk-blend';
+
+const returned = await returnTransaction({
+  legs: [{ spendScalar, chainIndex, amount }],
+  blendPoolContractId,
+  tokenContractId,
+  publicSignals,
+  ciphertext,
+  proof,
+  adapterContractId,
+  blendPool,
+  reserve,
+  poolContractId,
+  relayAccount,
+  networkPassphrase,
+  sourceSequence,
+  signatureExpirationLedger,
+  kytExpirationLedger,
+  kytSignature,
+  applicationIdHints,
+});
+```
+
+## Restore
+
+Walk every spend scalar and enabled pair. Keep a record whose share balance is zero. Stop a chain at the first index the Adapter has not recorded. `exchangeRate` is the reserve's `b_rate`.
+
+```ts
+import { restoreInterestDeposits } from '@arcanetech/privacy-sdk-blend';
+
+const deposits = await restoreInterestDeposits({
+  spendScalars,
+  markets: [{ blendPoolContractId, tokenContractId, exchangeRate }],
+  recorded,
+  shares,
+});
+```

@@ -5,7 +5,8 @@ import { placementAuthorization } from './placement-authorization.js';
 import {
   assertPublicDepositReturns,
   publicSignalFields,
-  publicWithdrawalRelayPackage,
+  interestDepositRelayPackage,
+  publicSignalBytes,
   SIX_BY_SIX_BINDING_STATE_ROOT_INDEX,
 } from './placement-signals.js';
 import { buildReturnEnvelope, type ReturnLegDraft } from './return-envelope.js';
@@ -46,7 +47,7 @@ export async function returnTransaction(
   input: ReturnTransactionInput,
 ): Promise<ReturnTransaction> {
   const legs = await Promise.all(input.legs.map((leg) => derivedLeg(input, leg)));
-  const relay = publicWithdrawalRelayPackage(input);
+  const relay = interestDepositRelayPackage(input);
   assertPublicDepositReturns({
     relay,
     reserve: input.reserve,
@@ -61,7 +62,7 @@ export async function returnTransaction(
     ...input,
     legs,
     signedSignals: authorization.signedSignals,
-    publicSignals: signalBytes(input.publicSignals),
+    publicSignals: publicSignalBytes(input.publicSignals),
   });
   return {
     envelope,
@@ -89,8 +90,4 @@ async function derivedLeg(
 
 function underlyingTotal(legs: readonly ReturnLeg[]): bigint {
   return legs.reduce((sum, leg) => sum + leg.amount, 0n);
-}
-
-function signalBytes(publicSignals: string): Uint8Array {
-  return Buffer.from(publicSignals.replace(/^0x/iu, ''), 'hex');
 }
