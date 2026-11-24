@@ -1,4 +1,9 @@
 export { deriveInterestDepositSeed } from './derive-interest-deposit-seed.js';
+export { nextInterestDeposit } from './next-interest-deposit.js';
+export type {
+  NextInterestDeposit,
+  NextInterestDepositInput,
+} from './next-interest-deposit.js';
 export { interestDepositAccount } from './interest-deposit-account.js';
 export {
   blendInterestDepositDefinitions,
