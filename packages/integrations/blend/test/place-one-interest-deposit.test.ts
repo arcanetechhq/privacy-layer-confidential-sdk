@@ -245,6 +245,7 @@ function placementInput(proof: Buffer, stateRoot: number) {
     recordedShares: 42n,
     exchangeRate: 2_000_000_000_000n,
     sourceSequence: RELAY_ACCOUNT_SEQUENCE,
+    chainIndex: 0,
   };
 }
 

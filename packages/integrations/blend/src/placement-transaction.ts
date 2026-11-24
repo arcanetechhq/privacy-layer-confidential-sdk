@@ -11,10 +11,8 @@ import {
 } from './placement-signals.js';
 import { underlyingFromShares } from './underlying.js';
 
-const CHAIN_INDEX_0 = 0;
-
 export interface PlacementTransaction {
-  chainIndex: typeof CHAIN_INDEX_0;
+  chainIndex: number;
   account: string;
   envelope: string;
   relay: RelayTransactPackageV1;
@@ -42,6 +40,7 @@ export interface PlacementTransactionInput {
   applicationIdHints: string[];
   recordedShares: bigint;
   exchangeRate: bigint;
+  chainIndex: number;
 }
 
 export async function placementTransaction(
@@ -51,7 +50,7 @@ export async function placementTransaction(
     spendScalar: input.spendScalar,
     blendPoolContractId: input.blendPoolContractId,
     tokenContractId: input.tokenContractId,
-    chainIndex: CHAIN_INDEX_0,
+    chainIndex: input.chainIndex,
   });
   const account = interestDepositAccount(seed);
   const relay = publicWithdrawalRelayPackage(input);
@@ -69,7 +68,7 @@ export async function placementTransaction(
     publicSignals: signalBytes(input.publicSignals),
   });
   return {
-    chainIndex: CHAIN_INDEX_0,
+    chainIndex: input.chainIndex,
     account,
     envelope,
     relay,
