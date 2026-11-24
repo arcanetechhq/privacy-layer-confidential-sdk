@@ -1,5 +1,12 @@
 export { deriveInterestDepositSeed } from './derive-interest-deposit-seed.js';
 export { nextInterestDeposit } from './next-interest-deposit.js';
+export { restoreInterestDeposits } from './restore-interest-deposits.js';
+export type {
+  InterestDepositBalanceQuery,
+  InterestDepositMarket,
+  RestoreInterestDepositsInput,
+  RestoredInterestDeposit,
+} from './restore-interest-deposits.js';
 export type {
   NextInterestDeposit,
   NextInterestDepositInput,
