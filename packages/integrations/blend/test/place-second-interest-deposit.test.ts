@@ -36,7 +36,7 @@ describe('a second Interest Deposit', () => {
       spendScalar: SPEND_SCALAR,
       blendPoolContractId: BLEND_POOL,
       tokenContractId: TOKEN,
-      sharesOf: (account) => Promise.resolve(shares.get(account) ?? 0n),
+      recorded: (account) => Promise.resolve(shares.has(account)),
     });
 
     expect(next).toEqual({

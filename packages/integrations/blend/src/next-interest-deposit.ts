@@ -1,8 +1,6 @@
 import { deriveInterestDepositSeed } from './derive-interest-deposit-seed.js';
 import { interestDepositAccount } from './interest-deposit-account.js';
 
-const FREE_SHARE_BALANCE = 0n;
-
 export interface NextInterestDeposit {
   chainIndex: number;
   account: string;
@@ -12,7 +10,7 @@ export interface NextInterestDepositInput {
   spendScalar: Uint8Array;
   blendPoolContractId: Uint8Array;
   tokenContractId: Uint8Array;
-  sharesOf: (account: string) => Promise<bigint>;
+  recorded: (account: string) => Promise<boolean>;
 }
 
 export async function nextInterestDeposit(
@@ -32,7 +30,7 @@ async function firstFreeIndex(
     chainIndex,
   });
   const account = interestDepositAccount(seed);
-  if ((await input.sharesOf(account)) === FREE_SHARE_BALANCE) {
+  if (!(await input.recorded(account))) {
     return { chainIndex, account };
   }
   return firstFreeIndex(input, chainIndex + 1);

@@ -4,7 +4,7 @@ import {
   SIX_BY_SIX_BINDING_ZK_NONCE,
   type RelayTransactPackageV1,
 } from '@arcanetech/privacy-sdk-stellar/transact';
-import { Keypair } from '@stellar/stellar-sdk';
+import { Keypair, StrKey } from '@stellar/stellar-sdk';
 
 const FIELD_BYTES = 32;
 const LENGTH_PREFIX_BYTES = 4;
@@ -52,6 +52,22 @@ export function assertPublicWithdrawalPays(input: {
   }
 }
 
+export function assertPublicDepositReturns(input: {
+  relay: RelayTransactPackageV1;
+  reserve: string;
+  amount: bigint;
+}): void {
+  const paid = readRelayTransactSupportedProfile(input.relay).publicLegContext;
+  const returnsUnderlying =
+    paid.publicWithdrawalAmount === '0' &&
+    paid.publicDepositAmount === input.amount.toString() &&
+    paid.publicDepositAssetHi === contractField(input.reserve, 0) &&
+    paid.publicDepositAssetLo === contractField(input.reserve, FIELD_BYTES / 2);
+  if (!returnsUnderlying) {
+    throw new Error('Public deposit is not the requested underlying.');
+  }
+}
+
 function signalBody(bytes: Buffer): Buffer {
   if (bytes.length < LENGTH_PREFIX_BYTES) {
     return bytes;
@@ -63,8 +79,18 @@ function signalBody(bytes: Buffer): Buffer {
   return bytes;
 }
 
+function contractField(contractId: string, offset: number): string {
+  return fieldFromRaw(Buffer.from(StrKey.decodeContract(contractId)), offset);
+}
+
 function addressField(account: string, offset: number): string {
-  const raw = Keypair.fromPublicKey(account).rawPublicKey();
+  return fieldFromRaw(
+    Buffer.from(Keypair.fromPublicKey(account).rawPublicKey()),
+    offset,
+  );
+}
+
+function fieldFromRaw(raw: Buffer, offset: number): string {
   const half = raw.subarray(offset, offset + FIELD_BYTES / 2).toString('hex');
   return `${'00'.repeat(FIELD_BYTES / 2)}${half}`;
 }
